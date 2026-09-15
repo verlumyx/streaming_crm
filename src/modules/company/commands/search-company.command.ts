@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 import type { SearchCompanyInput } from '../validation/search-company.schema';
 
 /** Keys MUST match `companyFilters`. */
@@ -11,7 +12,7 @@ export class SearchCompanyCommand {
 
   constructor(params: { filters?: CompanySearchFilters; limit?: number; offset?: number } = {}) {
     this.filters = params.filters ?? {};
-    this.limit = params.limit ?? 20;
+    this.limit = params.limit ?? DEFAULT_PAGE_SIZE;
     this.offset = params.offset ?? 0;
   }
 

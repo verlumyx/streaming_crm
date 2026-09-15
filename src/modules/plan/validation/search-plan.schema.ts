@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PLAN_CAPACITIES } from '../models/plan.model';
 import { isUuid } from '@/modules/shared/uuid';
 import { limitParam, offsetParam, optionalEnumFilter, optionalFilter } from '@/modules/shared/validation/fields';
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 
 export const PLAN_ACTIVE_FILTERS = ['1', '0'] as const;
 
@@ -12,7 +13,7 @@ export const searchPlanSchema = z.object({
   capacity: optionalEnumFilter(PLAN_CAPACITIES),
   serviceId: optionalFilter.transform((value) => (value && isUuid(value) ? value : undefined)),
   active: optionalEnumFilter(PLAN_ACTIVE_FILTERS),
-  limit: limitParam(20),
+  limit: limitParam(DEFAULT_PAGE_SIZE),
   offset: offsetParam(),
 });
 

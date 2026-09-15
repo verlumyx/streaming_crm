@@ -46,7 +46,7 @@ describe('Listar ventas', () => {
       agent: { id: ctx.user.id, name: ctx.user.name },
       price: 10,
     });
-    expect(element.props.meta).toEqual({ total: 1, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toEqual({ total: 1, limit: 10, offset: 0, hasMore: false });
     expect(element.props.clients.map((c: { id: string }) => c.id)).toEqual([ctx.client.id]);
     expect(element.props.services.map((s: { id: string }) => s.id)).toEqual([ctx.service.id]);
     expect(element.props.agents).toEqual([{ id: ctx.user.id, name: ctx.user.name }]);

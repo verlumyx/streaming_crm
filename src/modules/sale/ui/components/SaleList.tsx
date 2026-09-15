@@ -13,6 +13,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -246,7 +247,9 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
             <div className="text-muted-foreground p-12 text-center text-sm">Sin resultados para tu búsqueda.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={sales.length} total={meta.total} noun="venta" />
+        <ListFooter shown={sales.length} total={meta.total} noun="venta">
+          <ListPagination meta={meta} href={(query) => saleRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
 
       <SaleRenewDialog companyId={companyId} sale={renewSale} onClose={() => setRenewSale(null)} />

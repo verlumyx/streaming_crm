@@ -32,7 +32,7 @@ describe('Listar servicios', () => {
 
     expect(element.props.services).toHaveLength(3);
     expect(element.props.services[0]).toMatchObject({ active: true, createdAt: expect.any(String) });
-    expect(element.props.meta).toMatchObject({ total: 3, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toMatchObject({ total: 3, limit: 10, offset: 0, hasMore: false });
     expect(element.props.filters).toEqual({ active: '1' });
   });
 

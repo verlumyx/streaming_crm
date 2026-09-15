@@ -42,7 +42,7 @@ describe('Listar reembolsos', () => {
       sale: { id: sale.id, code: sale.code, status: 'active', price: 15 },
       client: { id: ctx.client.id, name: ctx.client.name },
     });
-    expect(element.props.meta).toEqual({ total: 2, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toEqual({ total: 2, limit: 10, offset: 0, hasMore: false });
   });
 
   it('filters by q (code or reason, case-insensitive, wildcards literal), status and sale', async () => {

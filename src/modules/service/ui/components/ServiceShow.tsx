@@ -1,25 +1,20 @@
-import Link from 'next/link';
-import { CalendarDays, Edit, Hash, Users } from 'lucide-react';
+import { CalendarDays, Hash, Users } from 'lucide-react';
 import { BackLink } from '@/components/back-link';
 import { MiniStat } from '@/components/mini-stat';
 import { StatusPill } from '@/components/status-pill';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format';
 import { serviceRoutes } from '@/modules/service/routes';
 import type { ServiceDto } from '@/modules/service/serializers/service.serializer';
 import { ServiceLogo } from './ServiceLogo';
-import { ServiceStatusButton } from './ServiceStatusButton';
 
 type Props = {
   companyId: string;
   service: ServiceDto;
-  canUpdate: boolean;
-  canUpdateStatus: boolean;
 };
 
-/** Ver: hero with logo and status, actions and the service metrics. Server component. */
-export function ServiceShow({ companyId, service, canUpdate, canUpdateStatus }: Props) {
+/** Ver: hero with logo and status and the service metrics. Read-only (preset catalogue). Server component. */
+export function ServiceShow({ companyId, service }: Props) {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-6 pb-14">
       <BackLink href={serviceRoutes.index(companyId)}>Servicios</BackLink>
@@ -48,20 +43,6 @@ export function ServiceShow({ companyId, service, canUpdate, canUpdateStatus }: 
               </span>
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2.5">
-          {canUpdateStatus && (
-            <ServiceStatusButton companyId={companyId} serviceId={service.id} active={service.active} />
-          )}
-          {canUpdate && (
-            <Button asChild variant="outline" className="bg-card h-10 rounded-[11px] px-4 font-semibold">
-              <Link href={serviceRoutes.edit(companyId, service.id)}>
-                <Edit />
-                Editar
-              </Link>
-            </Button>
-          )}
         </div>
       </Card>
 

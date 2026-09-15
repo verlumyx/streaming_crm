@@ -55,7 +55,7 @@ describe('searchRefundSchema', () => {
       status: undefined,
       saleId: undefined,
       clientId: undefined,
-      limit: 20,
+      limit: 10,
       offset: 0,
     });
     expect(searchRefundSchema.parse({ status: 'approved', saleId: SALE })).toMatchObject({ status: 'approved', saleId: SALE });

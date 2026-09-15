@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/client';
 import { uuidv7 } from '@/modules/shared/uuid';
 import ServiceShowPage from '@/app/[companyId]/services/[id]/page';
-import ServiceEditPage from '@/app/[companyId]/services/[id]/edit/page';
 import { resetDb } from '../../../helpers/reset-db';
 import { setSessionUser, expectNotFound, expectRedirect } from '../../../helpers/session-mock';
 import { assignRoleWithPermissions, createUserWithCompany } from '../../../helpers/company-context';
@@ -14,7 +13,7 @@ const params = (companyId: string, id: string) => ({ params: Promise.resolve({ c
 describe('Ver servicio', () => {
   beforeEach(resetDb);
 
-  it('the service show page renders', async () => {
+  it('the service show page renders read-only', async () => {
     const { user, company } = await createUserWithCompany(db);
     const service = await createService(db, { companyId: company.id, name: 'Netflix', maxProfiles: 5 });
     setSessionUser(user);
@@ -22,10 +21,10 @@ describe('Ver servicio', () => {
     const element = await ServiceShowPage(params(company.id, service.id));
 
     expect(element.props.service).toMatchObject({ id: service.id, name: 'Netflix', code: service.code, maxProfiles: 5 });
-    expect(element.props).toMatchObject({ canUpdate: true, canUpdateStatus: true });
+    expect(Object.keys(element.props).sort()).toEqual(['companyId', 'service']);
   });
 
-  it('the show page hides the actions the user cannot perform', async () => {
+  it('a user with only services.show can view a service', async () => {
     const { user, company } = await createUserWithCompany(db);
     const service = await createService(db, { companyId: company.id });
     await assignRoleWithPermissions(db, user.id, company.id, ['services.show']);
@@ -33,17 +32,7 @@ describe('Ver servicio', () => {
 
     const element = await ServiceShowPage(params(company.id, service.id));
 
-    expect(element.props).toMatchObject({ canUpdate: false, canUpdateStatus: false });
-  });
-
-  it('the edit page renders', async () => {
-    const { user, company } = await createUserWithCompany(db);
-    const service = await createService(db, { companyId: company.id });
-    setSessionUser(user);
-
-    const element = await ServiceEditPage(params(company.id, service.id));
-
-    expect(element.props.children.props.service).toMatchObject({ id: service.id });
+    expect(element.props.service).toMatchObject({ id: service.id });
   });
 
   it('showing a missing service is a 404', async () => {
@@ -52,7 +41,6 @@ describe('Ver servicio', () => {
 
     await expectNotFound(ServiceShowPage(params(company.id, uuidv7())));
     await expectNotFound(ServiceShowPage(params(company.id, 'not-a-uuid')));
-    await expectNotFound(ServiceEditPage(params(company.id, uuidv7())));
   });
 
   it('a service from another company cannot be viewed', async () => {
@@ -61,16 +49,14 @@ describe('Ver servicio', () => {
     setSessionUser(user);
 
     await expectNotFound(ServiceShowPage(params(company.id, foreign.id)));
-    await expectNotFound(ServiceEditPage(params(company.id, foreign.id)));
   });
 
-  it('a user without permission cannot see or edit a service', async () => {
+  it('a user without permission cannot see a service', async () => {
     const { user, company } = await createUserWithCompany(db);
     const service = await createService(db, { companyId: company.id });
     await assignRoleWithPermissions(db, user.id, company.id, ['services.list']);
     setSessionUser(user);
 
     await expectRedirect(ServiceShowPage(params(company.id, service.id)), `/${company.id}/dashboard?error=forbidden`);
-    await expectRedirect(ServiceEditPage(params(company.id, service.id)), `/${company.id}/dashboard?error=forbidden`);
   });
 });

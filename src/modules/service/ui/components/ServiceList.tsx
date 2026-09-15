@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { Edit, Eye, MoreHorizontal, Plus, Power, Search, Users } from 'lucide-react';
+import { Eye, Search, Users } from 'lucide-react';
 import { StatusPill } from '@/components/status-pill';
 import {
   ListFooter,
@@ -14,21 +13,12 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { usePermission } from '@/modules/shared/auth/company-context';
-import { SERVICE_PERMISSIONS } from '@/modules/service/permissions';
 import { serviceRoutes } from '@/modules/service/routes';
-import { updateServiceStatusAction } from '@/app/[companyId]/services/actions';
 import type { ServiceDto } from '@/modules/service/serializers/service.serializer';
 import type { ServiceFilters, ServiceMeta } from '../types/Service';
 import { ServiceLogo } from './ServiceLogo';
@@ -42,10 +32,9 @@ const TEXT_FILTERS: Array<[keyof Omit<ServiceFilters, 'active'>, string]> = [
 
 type Props = { companyId: string; services: ServiceDto[]; meta: ServiceMeta; filters: ServiceFilters };
 
+/** Listar (read-only: the catalogue is preset, no create / edit / status actions). */
 export function ServiceList({ companyId, services, meta, filters: initialFilters }: Props) {
   const router = useRouter();
-  const { can } = usePermission();
-  const [pending, startTransition] = useTransition();
   const [filters, setFilters] = useState<ServiceFilters>(initialFilters);
 
   const applyFilters = (next: ServiceFilters) => {
@@ -58,29 +47,8 @@ export function ServiceList({ companyId, services, meta, filters: initialFilters
     router.push(serviceRoutes.index(companyId));
   };
 
-  const toggleStatus = (service: ServiceDto) => {
-    startTransition(async () => {
-      const result = await updateServiceStatusAction(companyId, service.id, !service.active);
-      if (result?.status === 'error') toast.error(result.message ?? 'No se pudo cambiar el estado.');
-    });
-  };
-
   return (
-    <PageShell
-      title="Servicios"
-      subtitle={`${meta.total} servicio${meta.total !== 1 ? 's' : ''} en el catálogo`}
-      actions={
-        can(SERVICE_PERMISSIONS.CREATE) && (
-          <Button
-            className="h-10 rounded-[11px] px-4 font-semibold shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_28%,transparent)]"
-            onClick={() => router.push(serviceRoutes.create(companyId))}
-          >
-            <Plus />
-            Nuevo servicio
-          </Button>
-        )
-      }
-    >
+    <PageShell title="Servicios" subtitle={`${meta.total} servicio${meta.total !== 1 ? 's' : ''} en el catálogo`}>
       <div className="bg-card rounded-lg border p-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {TEXT_FILTERS.map(([key, label]) => (
@@ -159,34 +127,15 @@ export function ServiceList({ companyId, services, meta, filters: initialFilters
                 <StatusPill kind={service.active ? 'activo' : 'inactivo'} />
               </div>
               <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="bg-card rounded-[10px]" aria-label="Opciones">
-                      <MoreHorizontal className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => router.push(serviceRoutes.show(companyId, service.id))}>
-                      <Eye className="mr-2 size-4" />
-                      Ver
-                    </DropdownMenuItem>
-                    {can(SERVICE_PERMISSIONS.UPDATE) && (
-                      <DropdownMenuItem onSelect={() => router.push(serviceRoutes.edit(companyId, service.id))}>
-                        <Edit className="mr-2 size-4" />
-                        Editar
-                      </DropdownMenuItem>
-                    )}
-                    {can(SERVICE_PERMISSIONS.UPDATE_STATUS) && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem disabled={pending} onSelect={() => toggleStatus(service)}>
-                          <Power className="mr-2 size-4" />
-                          {service.active ? 'Inactivar' : 'Activar'}
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="bg-card rounded-[10px]"
+                  aria-label="Ver"
+                  onClick={() => router.push(serviceRoutes.show(companyId, service.id))}
+                >
+                  <Eye className="size-4" />
+                </Button>
               </div>
             </ListGridRow>
           ))}
@@ -194,7 +143,9 @@ export function ServiceList({ companyId, services, meta, filters: initialFilters
             <div className="text-muted-foreground p-12 text-center text-sm">Sin resultados para tu búsqueda.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={services.length} total={meta.total} noun="servicio" />
+        <ListFooter shown={services.length} total={meta.total} noun="servicio">
+          <ListPagination meta={meta} href={(query) => serviceRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
     </PageShell>
   );

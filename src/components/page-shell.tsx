@@ -176,7 +176,7 @@ export function ListFooter({ shown, total, noun, nounPlural, children, className
   return (
     <div
       className={cn(
-        'text-muted-foreground flex items-center justify-between gap-3 px-5 py-3.5 text-[13px] font-semibold',
+        'text-muted-foreground flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 text-[13px] font-semibold',
         className,
       )}
     >

@@ -25,7 +25,7 @@ describe('Listar roles', () => {
     const element = await renderIndex(company.id);
 
     expect(names(element)).toEqual(['Administrador', 'Editor']);
-    expect(element.props.meta).toMatchObject({ total: 2, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toMatchObject({ total: 2, limit: 10, offset: 0, hasMore: false });
     const admin = element.props.roles.find((r: { name: string }) => r.name === 'Administrador');
     expect(admin).toMatchObject({ isAdministrator: true, permissionType: 'all', status: 'active' });
   });

@@ -14,6 +14,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -178,7 +179,9 @@ export function ManualTransactionList({ companyId, manualTransactions: items, me
             <div className="text-muted-foreground p-12 text-center text-sm">Sin transacciones manuales registradas.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={items.length} total={meta.total} noun="transacción" nounPlural="transacciones" />
+        <ListFooter shown={items.length} total={meta.total} noun="transacción" nounPlural="transacciones">
+          <ListPagination meta={meta} href={(query) => manualTransactionRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
     </PageShell>
   );

@@ -14,6 +14,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -200,7 +201,9 @@ export function RoleList({ companyId, roles, meta, filters: initialFilters }: Pr
             <div className="text-muted-foreground p-12 text-center text-sm">Sin resultados para tu búsqueda.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={roles.length} total={meta.total} noun="rol" nounPlural="roles" />
+        <ListFooter shown={roles.length} total={meta.total} noun="rol" nounPlural="roles">
+          <ListPagination meta={meta} href={(query) => roleRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
     </PageShell>
   );

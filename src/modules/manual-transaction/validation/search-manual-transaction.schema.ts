@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { limitParam, offsetParam, optionalFilter } from '@/modules/shared/validation/fields';
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 
 const optionalDate = z
   .preprocess((v) => (Array.isArray(v) ? v[0] : v), z.iso.date().optional())
@@ -11,7 +12,7 @@ export const searchManualTransactionSchema = z.object({
   reference: optionalFilter,
   dateFrom: optionalDate,
   dateTo: optionalDate,
-  limit: limitParam(20),
+  limit: limitParam(DEFAULT_PAGE_SIZE),
   offset: offsetParam(),
 });
 

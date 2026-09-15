@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 import type { SearchClientInput } from '../validation/search-client.schema';
 
 /** Keys MUST match `clientFilters`. */
@@ -11,7 +12,7 @@ export class SearchClientCommand {
 
   constructor(params: { filters?: ClientSearchFilters; limit?: number; offset?: number; companyId: string }) {
     this.filters = params.filters ?? {};
-    this.limit = params.limit ?? 20;
+    this.limit = params.limit ?? DEFAULT_PAGE_SIZE;
     this.offset = params.offset ?? 0;
     this.companyId = params.companyId;
   }

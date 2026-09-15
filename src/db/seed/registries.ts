@@ -1,12 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { eq, notInArray } from 'drizzle-orm';
 import type { DbExecutor } from '@/modules/shared/infrastructure/db-executor';
 import { appModules, permissions } from '@/modules/permission/models/permission.model';
 import { menus } from '@/modules/menu/models/menu.model';
-import { PERMISSION_REGISTRY } from '@/modules/shared/permissions/registry';
+import { ALL_PERMISSION_ACTIONS, PERMISSION_REGISTRY } from '@/modules/shared/permissions/registry';
 import { MENU_REGISTRY } from '@/modules/shared/menu/menu-registry';
 import { uuidv7 } from '@/modules/shared/uuid';
 
-/** Upserts modules + permissions from the registry. Idempotent. */
+/**
+ * Upserts modules + permissions from the registry. Idempotent.
+ * Permissions no longer in the registry are deactivated (never deleted) so they leave the roles tree.
+ */
 export async function seedPermissions(db: DbExecutor): Promise<{ modules: number; permissions: number }> {
   let permissionCount = 0;
 
@@ -27,11 +30,16 @@ export async function seedPermissions(db: DbExecutor): Promise<{ modules: number
         .values({ id: uuidv7(), moduleId: row.id, action: perm.id, label: perm.label, order: perm.order, isActive: true })
         .onConflictDoUpdate({
           target: [permissions.moduleId, permissions.action],
-          set: { label: perm.label, order: perm.order },
+          set: { label: perm.label, order: perm.order, isActive: true },
         });
       permissionCount++;
     }
   }
+
+  await db
+    .update(permissions)
+    .set({ isActive: false })
+    .where(notInArray(permissions.action, [...ALL_PERMISSION_ACTIONS]));
 
   return { modules: PERMISSION_REGISTRY.length, permissions: permissionCount };
 }

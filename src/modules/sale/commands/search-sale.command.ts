@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 import { todayIsoDate } from '@/lib/format';
 import type { SearchSaleInput } from '../validation/search-sale.schema';
 
@@ -41,7 +42,7 @@ export class SearchSaleCommand {
     orderBy?: SaleSearchOrder;
   }) {
     this.filters = params.filters ?? {};
-    this.limit = params.limit ?? 20;
+    this.limit = params.limit ?? DEFAULT_PAGE_SIZE;
     this.offset = params.offset ?? 0;
     this.companyId = params.companyId;
     this.today = params.today ?? todayIsoDate();

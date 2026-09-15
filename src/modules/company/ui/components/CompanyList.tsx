@@ -15,6 +15,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -201,7 +202,9 @@ export function CompanyList({ companyId, companies, meta, filters: initialFilter
             />
           )}
         </ListGridBody>
-        <ListFooter shown={companies.length} total={meta.total} noun="empresa" />
+        <ListFooter shown={companies.length} total={meta.total} noun="empresa">
+          <ListPagination meta={meta} href={(query) => companyRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
     </PageShell>
   );

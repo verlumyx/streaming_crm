@@ -21,6 +21,8 @@ test('wrong credentials show an error and valid ones enter the company dashboard
   await page.locator('input[type="password"]').first().fill('incorrecta');
   await page.locator('button[type="submit"]').click();
   await expect(page.getByText(/credenciales/i).first()).toBeVisible();
+  // A single global <Toaster />: the error toast must not be rendered twice.
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(1);
   await expect(page).toHaveURL(/\/login/);
 
   await page.locator('input[type="password"]').first().fill(ADMIN.password);

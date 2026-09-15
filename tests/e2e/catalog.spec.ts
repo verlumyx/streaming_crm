@@ -3,25 +3,19 @@ import { openDefaultCompany, unique } from './helpers';
 
 const submit = (page: import('@playwright/test').Page) => page.locator('form button[type="submit"]').first().click();
 
-test('create, view and edit a streaming service', async ({ page }) => {
+test('the preset streaming services can only be listed and viewed', async ({ page }) => {
   const companyId = await openDefaultCompany(page);
-  const name = unique('Servicio E2E');
 
-  await page.goto(`/${companyId}/services/create`);
-  await page.locator('#name').fill(name);
-  await page.locator('#max-profiles').fill('3');
-  await submit(page);
-  await expect(page.getByText('Servicio creado correctamente.')).toBeVisible();
+  await page.goto(`/${companyId}/services`);
+  await expect(page.getByRole('button', { name: 'Nuevo servicio' })).toHaveCount(0);
 
-  await page.goto(`/${companyId}/services?name=${encodeURIComponent(name)}`);
-  await page.getByText(name, { exact: true }).first().click();
-  await expect(page.getByRole('heading', { name })).toBeVisible();
+  await page.getByRole('button', { name: 'Ver' }).first().click();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Editar' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Activar|Desactivar/ })).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Editar' }).click();
-  await page.locator('#name').fill(`${name} editado`);
-  await submit(page);
-  await expect(page.getByText('Servicio actualizado correctamente.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: `${name} editado` })).toBeVisible();
+  const createResponse = await page.goto(`/${companyId}/services/create`);
+  expect(createResponse?.status()).toBe(404);
 });
 
 test('create a plan on top of a service', async ({ page }) => {

@@ -35,7 +35,7 @@ describe('Listar cuentas', () => {
     const element = await page(ctx.company.id);
 
     expect(element.props.accounts).toHaveLength(2);
-    expect(element.props.meta).toMatchObject({ total: 2, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toMatchObject({ total: 2, limit: 10, offset: 0, hasMore: false });
     expect(element.props.services.map((s: { id: string }) => s.id)).toEqual([ctx.service.id]);
   });
 

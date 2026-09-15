@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { SALE_STATUSES } from '../models/sale.model';
 import { limitParam, offsetParam, optionalEnumFilter, optionalFilter } from '@/modules/shared/validation/fields';
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 import { optionalDateFilter, optionalDaysFilter, optionalListFilter, optionalUuidFilter } from './sale-fields';
 
 /** Listar: `searchParams` of the index page (also reused by the expirations report). Never throws. */
@@ -16,7 +17,7 @@ export const searchSaleSchema = z.object({
   endDateFrom: optionalDateFilter,
   endDateTo: optionalDateFilter,
   expiringSoon: optionalDaysFilter,
-  limit: limitParam(20),
+  limit: limitParam(DEFAULT_PAGE_SIZE),
   offset: offsetParam(),
 });
 

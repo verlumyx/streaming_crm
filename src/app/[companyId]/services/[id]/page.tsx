@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { db } from '@/db/client';
-import { guardPage, hasPermission } from '@/modules/shared/auth/require-permission';
+import { guardPage } from '@/modules/shared/auth/require-permission';
 import { isUuid } from '@/modules/shared/uuid';
 import { SERVICE_PERMISSIONS } from '@/modules/service/permissions';
 import { createServiceContainer } from '@/modules/service/container';
@@ -27,17 +27,5 @@ export default async function ServiceShowPage({ params }: Props) {
     throw error;
   }
 
-  const [canUpdate, canUpdateStatus] = await Promise.all([
-    hasPermission(companyId, SERVICE_PERMISSIONS.UPDATE),
-    hasPermission(companyId, SERVICE_PERMISSIONS.UPDATE_STATUS),
-  ]);
-
-  return (
-    <ServiceShow
-      companyId={companyId}
-      service={toServiceDto(row)}
-      canUpdate={canUpdate}
-      canUpdateStatus={canUpdateStatus}
-    />
-  );
+  return <ServiceShow companyId={companyId} service={toServiceDto(row)} />;
 }

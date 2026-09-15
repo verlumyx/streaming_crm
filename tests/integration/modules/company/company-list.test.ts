@@ -29,7 +29,7 @@ describe('Listar empresas', () => {
     });
 
     expect(element.props.companies).toHaveLength(2);
-    expect(element.props.meta).toMatchObject({ total: 2, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toMatchObject({ total: 2, limit: 10, offset: 0, hasMore: false });
     expect(element.props.companies[0]).toEqual(
       expect.objectContaining({ id: expect.any(String), createdAt: expect.any(String) }),
     );

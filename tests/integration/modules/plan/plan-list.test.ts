@@ -28,7 +28,7 @@ describe('Listar planes', () => {
     const props = await renderList(company.id);
 
     expect(props.plans).toHaveLength(3);
-    expect(props.meta).toMatchObject({ total: 3, limit: 20, offset: 0, hasMore: false });
+    expect(props.meta).toMatchObject({ total: 3, limit: 10, offset: 0, hasMore: false });
     expect(props.plans[0]).toMatchObject({ salePrice: 12.5, service: { id: service.id, name: 'Netflix' } });
   });
 

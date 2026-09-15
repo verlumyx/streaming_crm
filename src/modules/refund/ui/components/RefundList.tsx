@@ -14,6 +14,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -190,7 +191,9 @@ export function RefundList({ companyId, refunds: items, meta, filters: initialFi
             <div className="text-muted-foreground p-12 text-center text-sm">Sin resultados para tu búsqueda.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={items.length} total={meta.total} noun="reembolso" />
+        <ListFooter shown={items.length} total={meta.total} noun="reembolso">
+          <ListPagination meta={meta} href={(query) => refundRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
     </PageShell>
   );

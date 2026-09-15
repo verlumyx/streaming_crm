@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE } from '@/modules/shared/pagination/page-items';
 import type { SearchAccountInput } from '../validation/search-account.schema';
 
 /** Keys MUST match `accountFilters`. */
@@ -11,7 +12,7 @@ export class SearchAccountCommand {
 
   constructor(params: { filters?: AccountSearchFilters; limit?: number; offset?: number; companyId: string }) {
     this.filters = params.filters ?? {};
-    this.limit = params.limit ?? 20;
+    this.limit = params.limit ?? DEFAULT_PAGE_SIZE;
     this.offset = params.offset ?? 0;
     this.companyId = params.companyId;
   }

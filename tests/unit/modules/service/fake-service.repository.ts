@@ -1,9 +1,6 @@
 import type { ServiceRow } from '@/modules/service/models/service.model';
 import type { ServiceRepository } from '@/modules/service/repositories/service.repository';
-import type { CreateServiceCommand } from '@/modules/service/commands/create-service.command';
 import type { SearchServiceCommand } from '@/modules/service/commands/search-service.command';
-import type { UpdateServiceCommand } from '@/modules/service/commands/update-service.command';
-import type { UpdateStatusServiceCommand } from '@/modules/service/commands/update-status-service.command';
 import { ServiceNotFoundException } from '@/modules/service/exceptions/service-not-found.exception';
 import { formatSequentialCode } from '@/modules/shared/infrastructure/sequential-code';
 
@@ -11,19 +8,20 @@ import { formatSequentialCode } from '@/modules/shared/infrastructure/sequential
 export class FakeServiceRepository implements ServiceRepository {
   rows: ServiceRow[] = [];
 
-  async create(command: CreateServiceCommand): Promise<void> {
-    const sequence = this.rows.filter((r) => r.companyId === command.companyId).length + 1;
-    this.rows.push({
-      id: command.id,
-      companyId: command.companyId,
+  /** Test helper: services are preset (seeded), the repository itself has no create. */
+  add(values: Pick<ServiceRow, 'id' | 'companyId' | 'name'> & Partial<ServiceRow>): ServiceRow {
+    const sequence = this.rows.filter((r) => r.companyId === values.companyId).length + 1;
+    const row: ServiceRow = {
       code: formatSequentialCode('SER', sequence),
-      name: command.name,
-      logoUrl: command.logoUrl,
-      maxProfiles: command.maxProfiles,
+      logoUrl: null,
+      maxProfiles: 5,
       active: true,
       createdAt: new Date(),
       updatedAt: null,
-    });
+      ...values,
+    };
+    this.rows.push(row);
+    return row;
   }
 
   async findById(id: string, companyId: string) {
@@ -36,23 +34,9 @@ export class FakeServiceRepository implements ServiceRepository {
     return row;
   }
 
-  async update(row: ServiceRow, command: UpdateServiceCommand) {
-    Object.assign(row, { name: command.name, logoUrl: command.logoUrl, maxProfiles: command.maxProfiles });
-  }
-
-  async updateStatus(row: ServiceRow, command: UpdateStatusServiceCommand) {
-    row.active = command.active;
-  }
-
   async search(command: SearchServiceCommand) {
     const data = this.rows.filter((r) => r.companyId === command.companyId);
     return { data: data.slice(command.offset, command.offset + command.limit), total: data.length };
-  }
-
-  async existsByName(name: string, companyId: string, ignoreId?: string) {
-    return this.rows.some(
-      (r) => r.companyId === companyId && r.name.toLowerCase() === name.toLowerCase() && r.id !== ignoreId,
-    );
   }
 
   async listActive(companyId: string) {

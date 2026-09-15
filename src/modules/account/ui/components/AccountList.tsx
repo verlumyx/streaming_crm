@@ -13,6 +13,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -238,7 +239,9 @@ export function AccountList({ companyId, accounts, services, meta, filters: init
             <div className="text-muted-foreground p-12 text-center text-sm">Sin resultados para tu búsqueda.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={accounts.length} total={meta.total} noun="cuenta" />
+        <ListFooter shown={accounts.length} total={meta.total} noun="cuenta">
+          <ListPagination meta={meta} href={(query) => accountRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
 
       <AccountCredentialsDialog

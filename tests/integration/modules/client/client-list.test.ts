@@ -31,7 +31,21 @@ describe('Listar clientes', () => {
     });
 
     expect(element.props.clients).toHaveLength(2);
-    expect(element.props.meta).toMatchObject({ total: 2, limit: 20, offset: 0, hasMore: false });
+    expect(element.props.meta).toMatchObject({ total: 2, limit: 10, offset: 0, hasMore: false });
+  });
+
+  it('the clients index paginates with limit and offset', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    for (const name of ['Ana', 'Beto', 'Carla']) await createClient(db, { companyId: company.id, name });
+    setSessionUser(user);
+
+    const element = await ClientsPage({
+      params: Promise.resolve({ companyId: company.id }),
+      searchParams: Promise.resolve({ limit: '2', offset: '2' }),
+    });
+
+    expect(element.props.clients).toHaveLength(1);
+    expect(element.props.meta).toMatchObject({ total: 3, limit: 2, offset: 2, hasMore: false });
   });
 
   it('the clients index includes each client active platforms', async () => {

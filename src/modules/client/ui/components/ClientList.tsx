@@ -17,6 +17,7 @@ import {
   ListGridRow,
   PageShell,
 } from '@/components/page-shell';
+import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -227,7 +228,9 @@ export function ClientList({ companyId, clients, meta, filters: initialFilters }
             <div className="text-muted-foreground p-12 text-center text-sm">Sin resultados para tu búsqueda.</div>
           )}
         </ListGridBody>
-        <ListFooter shown={rows.length} total={meta.total} noun="cliente" />
+        <ListFooter shown={rows.length} total={meta.total} noun="cliente">
+          <ListPagination meta={meta} href={(query) => clientRoutes.index(companyId, query)} />
+        </ListFooter>
       </ListGrid>
     </PageShell>
   );
