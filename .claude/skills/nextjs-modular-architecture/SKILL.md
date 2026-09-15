@@ -10,7 +10,7 @@ metadata:
 
 This skill defines the standard modular architecture for this project. Every new file must follow this structure without exception.
 
-The stack is fixed: **Next.js App Router**, **TypeScript**, **Server Actions** for every mutation, **PostgreSQL + Drizzle ORM**, **better-auth** (organization = company), **Zod**, **Tailwind v4 + shadcn/ui**, **Vitest** and **Playwright**, **pnpm**.
+The stack is fixed: **Next.js App Router**, **TypeScript**, **Server Actions** for every mutation, **PostgreSQL + Drizzle ORM**, **better-auth** (email + password, 2FA; company membership and per-company role live in the `user_company` table), **Zod**, **Tailwind v4 + shadcn/ui**, **Vitest** and **Playwright**, **pnpm**.
 
 ---
 

@@ -12,7 +12,7 @@ heredadas. Las skills en `.claude/skills/` ya están escritas en términos de Ne
 | Framework | Next.js (App Router), TypeScript, `pnpm` |
 | Mutaciones | Server Actions (`'use server'`), sin Route Handlers para CRUD |
 | Base de datos | PostgreSQL + Drizzle ORM (`drizzle-kit` para migraciones) |
-| Auth / multi-tenant | better-auth con plugin `organization` (organization = company) |
+| Auth / multi-tenant | better-auth (email + contraseña, 2FA, plugin `admin`); membresía y rol por empresa en la tabla propia `user_company` |
 | Validación | Zod (mensajes en español) |
 | UI | Tailwind CSS v4 + shadcn/ui + lucide-react + sonner |
 | Tests | Vitest (unit + integration), Playwright (e2e) |
@@ -41,7 +41,7 @@ heredadas. Las skills en `.claude/skills/` ya están escritas en términos de Ne
 | `{Module}ServiceProvider` (bindings + rutas) | `container.ts` (factory de servicios); las rutas son las carpetas del App Router |
 | `routes.php` + regex UUID | Carpetas bajo `src/app/[companyId]/`; `id` validado con `z.string().uuid()` → `notFound()` |
 | Wayfinder / `route()` | `src/modules/{module-name}/routes.ts` (builders de URL tipados) |
-| Prefijo `{company}` + middleware `company.access` | `src/app/[companyId]/layout.tsx` → `requireCompanyAccess(companyId)` |
+| Prefijo `{company}` + middleware `company.access` | `src/app/[companyId]/layout.tsx` → `requireCompanyAccess(companyId)` (lee `user_company` + `app_companies`) |
 | `User::hasPermission()` (rol por company, `permission_type = 'all'`) | `hasPermission(companyId, action)` en `shared/auth`, con `React.cache` por request; misma semántica de `'all'` |
 | `seed_initial_modules.sql` / `seed_initial_menus.sql` / `MenuSeeder` | `src/modules/{module-name}/permissions.ts` + `shared/permissions/registry.ts` + `shared/menu/menu-registry.ts` + `pnpm db:seed` |
 | Código secuencial con `lockForUpdate()` | `tx.select()...orderBy(desc(code)).limit(1).for('update')` dentro de la transacción de la action |
@@ -49,6 +49,7 @@ heredadas. Las skills en `.claude/skills/` ya están escritas en términos de Ne
 | Pest unit / feature | Vitest unit (fake repository) + Vitest integration (DB de test) + Playwright e2e |
 | Laravel scheduler / comando artisan | `src/scripts/*.ts` ejecutado por un script `pnpm` + cron |
 | `config('sales.grace_period_days')` | `src/config/sales.ts` → `salesConfig.gracePeriodDays` (desde env, default 3) |
+| API móvil Sanctum (`/api/login`, `/api/logout`, `/api/me`, `/api/companies/{company}/context|menu`) | Route Handlers en `src/app/api/**` + módulo `src/modules/api-auth` (tokens Bearer propios en `app_api_tokens`, solo el SHA-256; máximo 2 dispositivos; `throttle:10,1` en memoria). Es la única excepción a "sin Route Handlers": clientes externos, no CRUD |
 
 ## Mapa de skills
 

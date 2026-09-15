@@ -1,0 +1,17 @@
+// Barrel: every module model MUST be re-exported here (drizzle-kit and the relational API only see this file).
+export * from './auth-schema';
+export * from '@/modules/company/models/company.model';
+export * from '@/modules/shared/models/user-company.model';
+export * from '@/modules/role/models/role.model';
+export * from '@/modules/permission/models/permission.model';
+export * from '@/modules/menu/models/menu.model';
+export * from '@/modules/client/models/client.model';
+export * from '@/modules/service/models/service.model';
+export * from '@/modules/plan/models/plan.model';
+export * from '@/modules/account/models/account.model';
+export * from '@/modules/sale/models/sale.model';
+export * from '@/modules/transaction/models/transaction.model';
+export * from '@/modules/refund/models/refund.model';
+export * from '@/modules/manual-transaction/models/manual-transaction.model';
+export * from '@/modules/lead/models/lead.model';
+export * from '@/modules/api-auth/models/api-token.model';

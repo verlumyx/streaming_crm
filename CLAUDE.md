@@ -7,7 +7,7 @@ CRM para la venta y gestión de cuentas de streaming (clientes, catálogo de ser
 - **Next.js** (App Router) + **TypeScript**, package manager **pnpm**.
 - **Server Actions** para toda mutación. No hay Route Handlers ni `fetch` cliente para CRUD de módulos.
 - **PostgreSQL + Drizzle ORM**; migraciones con `drizzle-kit`. Tablas de la app con prefijo `app_`.
-- **better-auth** con plugin `organization` (organization = company). Todas las rutas de módulo viven bajo `/{companyId}/...`.
+- **better-auth** (email + contraseña, 2FA, plugin `admin`). La membresía usuario ↔ empresa, su estado y el rol por empresa viven en la tabla propia `user_company`. Todas las rutas de módulo viven bajo `/{companyId}/...`.
 - **Zod** para validación (mensajes en español).
 - **Tailwind CSS v4 + shadcn/ui** (`src/components/ui/`), `lucide-react`, `sonner`.
 - **Vitest** (unit + integration) y **Playwright** (e2e).
@@ -108,7 +108,7 @@ pnpm build          # production build
 pnpm lint           # eslint
 pnpm typecheck      # tsc --noEmit
 pnpm test           # vitest run
-pnpm test:e2e       # playwright test
+pnpm test:e2e       # playwright test (PLAYWRIGHT_BASE_URL=http://localhost:3001 when dev runs on another port)
 pnpm db:generate    # drizzle-kit generate
 pnpm db:migrate     # drizzle-kit migrate
 pnpm db:seed        # seed modules, permissions and menu from the registries
@@ -121,3 +121,13 @@ pnpm db:seed        # seed modules, permissions and menu from the registries
 ## Replies
 
 - Be concise in your explanations — focus on what's important rather than explaining obvious details.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
