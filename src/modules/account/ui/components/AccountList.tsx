@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { money, formatDate } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import { ACCOUNT_STATUSES } from '@/modules/account/models/account.model';
@@ -106,43 +106,39 @@ export function AccountList({ companyId, accounts, services, meta, filters: init
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-status">Estado</Label>
-            <Select
+            <SearchableSelect
+              id="filter-status"
+              options={[
+                { value: 'todos', label: 'Todos' },
+                ...ACCOUNT_STATUSES.map((status) => ({ value: status, label: ACCOUNT_STATUS_LABELS[status] })),
+              ]}
               value={filters.status ?? 'todos'}
-              onValueChange={(value) =>
-                applyFilters({ ...filters, status: value === 'todos' ? undefined : (value as AccountFilters['status']) })
+              onChange={(value) =>
+                applyFilters({
+                  ...filters,
+                  status: !value || value === 'todos' ? undefined : (value as AccountFilters['status']),
+                })
               }
-            >
-              <SelectTrigger id="filter-status" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {ACCOUNT_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {ACCOUNT_STATUS_LABELS[status]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Todos"
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-service">Servicio</Label>
-            <Select
+            <SearchableSelect
+              id="filter-service"
+              options={[
+                { value: 'todos', label: 'Todos' },
+                ...services.map((service) => ({ value: service.id, label: service.name })),
+              ]}
               value={filters.serviceId ?? 'todos'}
-              onValueChange={(value) => applyFilters({ ...filters, serviceId: value === 'todos' ? undefined : value })}
-            >
-              <SelectTrigger id="filter-service" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) =>
+                applyFilters({ ...filters, serviceId: !value || value === 'todos' ? undefined : value })
+              }
+              placeholder="Todos"
+              searchPlaceholder="Buscar servicio..."
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

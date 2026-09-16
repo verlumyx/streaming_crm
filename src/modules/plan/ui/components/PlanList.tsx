@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { money } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import { PLAN_CAPACITIES } from '@/modules/plan/models/plan.model';
@@ -108,61 +108,56 @@ export function PlanList({ companyId, plans, services, meta, filters: initialFil
           ))}
           <div className="space-y-2">
             <Label htmlFor="filter-service">Servicio</Label>
-            <Select
+            <SearchableSelect
+              id="filter-service"
+              options={[{ value: 'all', label: 'Todos' }, ...services.map((s) => ({ value: s.id, label: s.name }))]}
               value={filters.serviceId ?? 'all'}
-              onValueChange={(value) => applyFilters({ ...filters, serviceId: value === 'all' ? undefined : value })}
-            >
-              <SelectTrigger id="filter-service" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {services.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) =>
+                applyFilters({ ...filters, serviceId: !value || value === 'all' ? undefined : value })
+              }
+              placeholder="Todos"
+              searchPlaceholder="Buscar servicio..."
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-capacity">Capacidad</Label>
-            <Select
+            <SearchableSelect
+              id="filter-capacity"
+              options={[
+                { value: 'all', label: 'Todas' },
+                ...PLAN_CAPACITIES.map((capacity) => ({ value: capacity, label: PLAN_CAPACITY_LABELS[capacity] })),
+              ]}
               value={filters.capacity ?? 'all'}
-              onValueChange={(value) =>
-                applyFilters({ ...filters, capacity: value === 'all' ? undefined : (value as PlanFilters['capacity']) })
+              onChange={(value) =>
+                applyFilters({
+                  ...filters,
+                  capacity: !value || value === 'all' ? undefined : (value as PlanFilters['capacity']),
+                })
               }
-            >
-              <SelectTrigger id="filter-capacity" className="w-full">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {PLAN_CAPACITIES.map((capacity) => (
-                  <SelectItem key={capacity} value={capacity}>
-                    {PLAN_CAPACITY_LABELS[capacity]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Todas"
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-active">Estado</Label>
-            <Select
+            <SearchableSelect
+              id="filter-active"
+              options={[
+                { value: 'all', label: 'Todos' },
+                { value: '1', label: 'Activos' },
+                { value: '0', label: 'Inactivos' },
+              ]}
               value={filters.active ?? 'all'}
-              onValueChange={(value) =>
-                applyFilters({ ...filters, active: value === 'all' ? undefined : (value as PlanFilters['active']) })
+              onChange={(value) =>
+                applyFilters({
+                  ...filters,
+                  active: !value || value === 'all' ? undefined : (value as PlanFilters['active']),
+                })
               }
-            >
-              <SelectTrigger id="filter-active" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="1">Activos</SelectItem>
-                <SelectItem value="0">Inactivos</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Todos"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

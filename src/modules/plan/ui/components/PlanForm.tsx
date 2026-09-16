@@ -8,7 +8,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { FormSectionHead } from '@/components/form-section-head';
 import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -45,25 +45,18 @@ export function PlanForm() {
                 <Label htmlFor="service-id" className="text-[13px] font-semibold">
                   Servicio *
                 </Label>
-                <Select
-                  value={data.serviceId || undefined}
-                  onValueChange={(value) => setData('serviceId', value)}
+                <SearchableSelect
+                  id="service-id"
+                  options={services.map((s) => ({ value: s.id, label: `${s.name} (${s.code})` }))}
+                  value={data.serviceId || null}
+                  onChange={(value) => value && setData('serviceId', value)}
                   disabled={!hasServices}
-                >
-                  <SelectTrigger
-                    id="service-id"
-                    className={cn('h-[42px] w-full rounded-[10px]', errors.serviceId && 'border-bad')}
-                  >
-                    <SelectValue placeholder={hasServices ? 'Selecciona un servicio' : 'Sin servicios activos'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name} ({s.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={hasServices ? 'Selecciona un servicio' : 'Sin servicios activos'}
+                  searchPlaceholder="Buscar servicio..."
+                  emptyText="No hay servicios activos"
+                  aria-invalid={Boolean(errors.serviceId)}
+                  className={cn('h-[42px] rounded-[10px]', errors.serviceId && 'border-bad')}
+                />
                 <FieldError messages={errors.serviceId} />
               </div>
 
@@ -89,21 +82,16 @@ export function PlanForm() {
                 <Label htmlFor="capacity" className="text-[13px] font-semibold">
                   Capacidad *
                 </Label>
-                <Select value={data.capacity} onValueChange={(value) => setData('capacity', value as PlanCapacity)}>
-                  <SelectTrigger
-                    id="capacity"
-                    className={cn('h-[42px] w-full rounded-[10px]', errors.capacity && 'border-bad')}
-                  >
-                    <SelectValue placeholder="Capacidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLAN_CAPACITIES.map((capacity) => (
-                      <SelectItem key={capacity} value={capacity}>
-                        {PLAN_CAPACITY_LABELS[capacity]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="capacity"
+                  options={PLAN_CAPACITIES.map((capacity) => ({ value: capacity, label: PLAN_CAPACITY_LABELS[capacity] }))}
+                  value={data.capacity}
+                  onChange={(value) => value && setData('capacity', value as PlanCapacity)}
+                  placeholder="Capacidad"
+                  emptyText="Sin resultados"
+                  aria-invalid={Boolean(errors.capacity)}
+                  className={cn('h-[42px] rounded-[10px]', errors.capacity && 'border-bad')}
+                />
                 <FieldError messages={errors.capacity} />
               </div>
 
@@ -111,24 +99,16 @@ export function PlanForm() {
                 <Label htmlFor="duration-days" className="text-[13px] font-semibold">
                   Duración *
                 </Label>
-                <Select
+                <SearchableSelect
+                  id="duration-days"
+                  options={PLAN_DURATIONS.map((days) => ({ value: String(days), label: planDurationLabel(days) }))}
                   value={String(data.durationDays)}
-                  onValueChange={(value) => setData('durationDays', Number(value))}
-                >
-                  <SelectTrigger
-                    id="duration-days"
-                    className={cn('h-[42px] w-full rounded-[10px]', errors.durationDays && 'border-bad')}
-                  >
-                    <SelectValue placeholder="Selecciona una duración" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLAN_DURATIONS.map((days) => (
-                      <SelectItem key={days} value={String(days)}>
-                        {planDurationLabel(days)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => value && setData('durationDays', Number(value))}
+                  placeholder="Selecciona una duración"
+                  emptyText="Sin resultados"
+                  aria-invalid={Boolean(errors.durationDays)}
+                  className={cn('h-[42px] rounded-[10px]', errors.durationDays && 'border-bad')}
+                />
                 <FieldError messages={errors.durationDays} />
               </div>
 

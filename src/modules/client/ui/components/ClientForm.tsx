@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormSectionHead } from '@/components/form-section-head';
 import { COUNTRY_CODES, joinPhone } from '@/lib/phone';
@@ -54,18 +55,16 @@ export function ClientForm() {
                   Teléfono / WhatsApp *
                 </Label>
                 <div className="flex gap-2">
-                  <select
-                    value={data.phonePrefix}
-                    onChange={(e) => setData('phonePrefix', e.target.value)}
+                  <SearchableSelect
                     aria-label="Prefijo de país"
-                    className="border-input bg-card focus:border-primary focus:ring-primary-soft h-[42px] shrink-0 rounded-[10px] border px-2 text-sm outline-none focus:ring-[3px]"
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.name} value={c.dial}>
-                        {c.name} ({c.dial})
-                      </option>
-                    ))}
-                  </select>
+                    options={COUNTRY_CODES.map((c) => ({ value: c.dial, label: `${c.name} (${c.dial})` }))}
+                    value={data.phonePrefix}
+                    onChange={(value) => value && setData('phonePrefix', value)}
+                    searchPlaceholder="Buscar país..."
+                    emptyText="Sin resultados"
+                    className="h-[42px] w-auto max-w-[45%] shrink-0 rounded-[10px]"
+                    contentClassName="w-64"
+                  />
                   <Input
                     id="phone-number"
                     type="tel"

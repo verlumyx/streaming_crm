@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { decimal, formatDate } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
@@ -76,61 +76,55 @@ export function ExpirationReport({ companyId, searched, sales, summary, services
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="filter-status">Estado</Label>
-            <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v as ExpirationStatusFilter })}>
-              <SelectTrigger id="filter-status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expiring">Por vencer</SelectItem>
-                <SelectItem value="expired">Vencidas</SelectItem>
-                <SelectItem value="all">Todas</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-status"
+              options={[
+                { value: 'expiring', label: 'Por vencer' },
+                { value: 'expired', label: 'Vencidas' },
+                { value: 'all', label: 'Todas' },
+              ]}
+              value={filters.status}
+              onChange={(v) => v && setFilters({ ...filters, status: v as ExpirationStatusFilter })}
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-days">Próximos días</Label>
-            <Select value={String(filters.days)} onValueChange={(v) => setFilters({ ...filters, days: Number(v) })}>
-              <SelectTrigger id="filter-days" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 días</SelectItem>
-                <SelectItem value="15">15 días</SelectItem>
-                <SelectItem value="30">30 días</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-days"
+              options={[
+                { value: '7', label: '7 días' },
+                { value: '15', label: '15 días' },
+                { value: '30', label: '30 días' },
+              ]}
+              value={String(filters.days)}
+              onChange={(v) => v && setFilters({ ...filters, days: Number(v) })}
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-service">Servicio</Label>
-            <Select value={filters.serviceId ?? 'all'} onValueChange={(v) => setFilters({ ...filters, serviceId: v === 'all' ? undefined : v })}>
-              <SelectTrigger id="filter-service" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {services.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-service"
+              options={[{ value: 'all', label: 'Todos' }, ...services.map((s) => ({ value: s.id, label: s.name }))]}
+              value={filters.serviceId ?? 'all'}
+              onChange={(v) => setFilters({ ...filters, serviceId: !v || v === 'all' ? undefined : v })}
+              placeholder="Todos"
+              searchPlaceholder="Buscar servicio..."
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-agent">Agente</Label>
-            <Select value={filters.agentId ?? 'all'} onValueChange={(v) => setFilters({ ...filters, agentId: v === 'all' ? undefined : v })}>
-              <SelectTrigger id="filter-agent" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {agents.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-agent"
+              options={[{ value: 'all', label: 'Todos' }, ...agents.map((a) => ({ value: a.id, label: a.name }))]}
+              value={filters.agentId ?? 'all'}
+              onChange={(v) => setFilters({ ...filters, agentId: !v || v === 'all' ? undefined : v })}
+              placeholder="Todos"
+              searchPlaceholder="Buscar vendedor..."
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-date-from">Desde (vencimiento)</Label>

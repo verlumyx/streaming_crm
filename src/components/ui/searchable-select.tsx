@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 export interface SearchableSelectOption {
   value: string;
   label: string;
+  /** Encabezado del grupo; las opciones con el mismo `group` se muestran juntas bajo ese título. */
+  group?: string;
 }
 
 interface SearchableSelectProps {
@@ -32,6 +34,9 @@ interface SearchableSelectProps {
   name?: string;
   id?: string;
   className?: string;
+  /** Clases del desplegable (por defecto toma el ancho del disparador). */
+  contentClassName?: string;
+  'aria-label'?: string;
   'aria-invalid'?: boolean;
 }
 
@@ -51,11 +56,20 @@ export function SearchableSelect({
   name,
   id,
   className,
+  contentClassName,
+  'aria-label': ariaLabel,
   'aria-invalid': ariaInvalid,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
 
   const selected = React.useMemo(() => options.find((o) => o.value === value) ?? null, [options, value]);
+
+  const groups = React.useMemo(() => {
+    const byHeading = new Map<string | undefined, SearchableSelectOption[]>();
+    for (const option of options)
+      byHeading.set(option.group, [...(byHeading.get(option.group) ?? []), option]);
+    return [...byHeading.entries()];
+  }, [options]);
 
   const handleClear = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -73,6 +87,7 @@ export function SearchableSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel}
           aria-invalid={ariaInvalid}
           disabled={disabled}
           className={cn(
@@ -98,30 +113,32 @@ export function SearchableSelect({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+      <PopoverContent className={cn('w-(--radix-popover-trigger-width) p-0', contentClassName)} align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => {
-                const isSelected = option.value === value;
-                return (
-                  <CommandItem
-                    key={option.value}
-                    value={`${option.label} ${option.value}`}
-                    data-checked={isSelected}
-                    onSelect={() => {
-                      onChange(isSelected && clearable ? null : option.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')} />
-                    <span className="truncate">{option.label}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
+            {groups.map(([heading, groupOptions]) => (
+              <CommandGroup key={heading ?? ''} heading={heading}>
+                {groupOptions.map((option) => {
+                  const isSelected = option.value === value;
+                  return (
+                    <CommandItem
+                      key={`${option.value} ${option.label}`}
+                      value={`${option.label} ${option.value}`}
+                      data-checked={isSelected}
+                      onSelect={() => {
+                        onChange(isSelected && clearable ? null : option.value);
+                        setOpen(false);
+                      }}
+                    >
+                      <Check className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')} />
+                      <span className="truncate">{option.label}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>

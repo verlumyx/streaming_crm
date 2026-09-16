@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { formatDateTime } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import { ROLE_PERMISSIONS } from '@/modules/role/permissions';
@@ -100,21 +100,23 @@ export function RoleList({ companyId, roles, meta, filters: initialFilters }: Pr
           ))}
           <div className="space-y-2">
             <Label htmlFor="filter-status">Estado</Label>
-            <Select
+            <SearchableSelect
+              id="filter-status"
+              options={[
+                { value: 'todos', label: 'Todos' },
+                { value: 'active', label: 'Activos' },
+                { value: 'inactive', label: 'Inactivos' },
+              ]}
               value={filters.status ?? 'todos'}
-              onValueChange={(value) =>
-                applyFilters({ ...filters, status: value === 'todos' ? undefined : (value as RoleFilters['status']) })
+              onChange={(value) =>
+                applyFilters({
+                  ...filters,
+                  status: !value || value === 'todos' ? undefined : (value as RoleFilters['status']),
+                })
               }
-            >
-              <SelectTrigger id="filter-status" className="w-full">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="active">Activos</SelectItem>
-                <SelectItem value="inactive">Inactivos</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Estado"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { money } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import type { ActionState } from '@/modules/shared/actions/action-state';
@@ -90,22 +90,17 @@ export function RefundList({ companyId, refunds: items, meta, filters: initialFi
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-status">Estado</Label>
-            <Select
+            <SearchableSelect
+              id="filter-status"
+              options={[
+                { value: ALL, label: 'Todos' },
+                ...REFUND_STATUSES.map((status) => ({ value: status, label: REFUND_STATUS_LABELS[status] })),
+              ]}
               value={filters.status ?? ALL}
-              onValueChange={(value) => setFilters({ ...filters, status: value === ALL ? undefined : value })}
-            >
-              <SelectTrigger id="filter-status" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {REFUND_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {REFUND_STATUS_LABELS[status]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => setFilters({ ...filters, status: !value || value === ALL ? undefined : value })}
+              placeholder="Todos"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

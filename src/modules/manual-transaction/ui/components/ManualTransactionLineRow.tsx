@@ -4,15 +4,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { cn } from '@/lib/utils';
 import { useManualTransactionFormContext } from '../contexts/ManualTransactionFormContext';
 
@@ -26,29 +18,20 @@ export function ManualTransactionLineRow({ index }: { index: number }) {
   return (
     <div className="bg-card grid grid-cols-1 gap-3 rounded-[10px] border p-3 sm:grid-cols-[minmax(0,1fr)_140px_minmax(0,1fr)_auto] sm:items-start">
       <div className="flex flex-col gap-1.5">
-        <Select value={line.category || undefined} onValueChange={(value) => updateLine(index, { category: value })}>
-          <SelectTrigger className={cn('h-[42px] w-full rounded-[10px]', categoryError && 'border-bad')}>
-            <SelectValue placeholder="Categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Ingresos</SelectLabel>
-              {catalog.income.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel>Egresos</SelectLabel>
-              {catalog.expense.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          aria-label="Categoría"
+          options={[
+            ...catalog.income.map((option) => ({ ...option, group: 'Ingresos' })),
+            ...catalog.expense.map((option) => ({ ...option, group: 'Egresos' })),
+          ]}
+          value={line.category || null}
+          onChange={(value) => value && updateLine(index, { category: value })}
+          placeholder="Categoría"
+          searchPlaceholder="Buscar categoría..."
+          emptyText="Sin resultados"
+          aria-invalid={Boolean(categoryError)}
+          className={cn('h-[42px] rounded-[10px]', categoryError && 'border-bad')}
+        />
         {categoryError && <p className="text-bad text-sm">{categoryError}</p>}
       </div>
 

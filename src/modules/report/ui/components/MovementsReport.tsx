@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/page-shell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { TransactionCatalog } from '@/modules/transaction/models/transaction.model';
 import type { TransactionDto } from '@/modules/transaction/serializers/transaction.serializer';
 import { reportRoutes } from '@/modules/report/routes';
@@ -49,35 +49,26 @@ export function MovementsReport({ companyId, searched, movements, meta, filters:
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-type">Tipo</Label>
-            <Select value={filters.type ?? 'todos'} onValueChange={(v) => setFilters({ ...filters, type: v === 'todos' ? undefined : v })}>
-              <SelectTrigger id="filter-type" className="w-full">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {catalog.types.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-type"
+              options={[{ value: 'todos', label: 'Todos' }, ...catalog.types]}
+              value={filters.type ?? 'todos'}
+              onChange={(v) => setFilters({ ...filters, type: !v || v === 'todos' ? undefined : v })}
+              placeholder="Tipo"
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-category">Categoría</Label>
-            <Select value={filters.category ?? 'todas'} onValueChange={(v) => setFilters({ ...filters, category: v === 'todas' ? undefined : v })}>
-              <SelectTrigger id="filter-category" className="w-full">
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas</SelectItem>
-                {catalog.categories.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-category"
+              options={[{ value: 'todas', label: 'Todas' }, ...catalog.categories]}
+              value={filters.category ?? 'todas'}
+              onChange={(v) => setFilters({ ...filters, category: !v || v === 'todas' ? undefined : v })}
+              placeholder="Categoría"
+              searchPlaceholder="Buscar categoría..."
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <ReportFilterActions pending={pending} onSearch={search} onClear={clear} />

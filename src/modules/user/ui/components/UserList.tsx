@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { formatDateTime } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import { USER_PERMISSIONS } from '@/modules/user/permissions';
@@ -102,24 +102,23 @@ export function UserList({ companyId, users, meta, filters: initialFilters }: Pr
           ))}
           <div className="space-y-2">
             <Label htmlFor="filter-email-verified">Estado email</Label>
-            <Select
+            <SearchableSelect
+              id="filter-email-verified"
+              options={[
+                { value: 'all', label: 'Todos' },
+                { value: 'verified', label: 'Verificado' },
+                { value: 'unverified', label: 'No verificado' },
+              ]}
               value={filters.emailVerified ?? 'all'}
-              onValueChange={(value) =>
+              onChange={(value) =>
                 applyFilters({
                   ...filters,
-                  emailVerified: value === 'all' ? undefined : (value as UserFilters['emailVerified']),
+                  emailVerified: !value || value === 'all' ? undefined : (value as UserFilters['emailVerified']),
                 })
               }
-            >
-              <SelectTrigger id="filter-email-verified" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="verified">Verificado</SelectItem>
-                <SelectItem value="unverified">No verificado</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Todos"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

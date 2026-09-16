@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormSectionHead } from '@/components/form-section-head';
 import { cn } from '@/lib/utils';
@@ -65,22 +65,20 @@ export function RoleForm() {
               <Label htmlFor="permission-type" className="text-[13px] font-semibold">
                 Tipo de permisos *
               </Label>
-              <Select
+              <SearchableSelect
+                id="permission-type"
+                options={[
+                  { value: 'all', label: PERMISSION_TYPE_LABELS.all },
+                  { value: 'custom', label: PERMISSION_TYPE_LABELS.custom },
+                ]}
                 value={data.permissionType}
-                onValueChange={(value) => setData('permissionType', value as PermissionType)}
+                onChange={(value) => value && setData('permissionType', value as PermissionType)}
                 disabled={isLocked}
-              >
-                <SelectTrigger
-                  id="permission-type"
-                  className={cn('h-[42px] w-full rounded-[10px]', errors.permissionType && 'border-bad')}
-                >
-                  <SelectValue placeholder="Seleccione el tipo de permisos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{PERMISSION_TYPE_LABELS.all}</SelectItem>
-                  <SelectItem value="custom">{PERMISSION_TYPE_LABELS.custom}</SelectItem>
-                </SelectContent>
-              </Select>
+                placeholder="Seleccione el tipo de permisos"
+                emptyText="Sin resultados"
+                aria-invalid={Boolean(errors.permissionType)}
+                className={cn('h-[42px] rounded-[10px]', errors.permissionType && 'border-bad')}
+              />
               <FieldError messages={errors.permissionType} />
             </div>
 

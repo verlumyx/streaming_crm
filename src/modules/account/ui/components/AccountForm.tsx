@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormSectionHead } from '@/components/form-section-head';
 import { money } from '@/lib/format';
@@ -58,18 +58,18 @@ export function AccountForm() {
               <Label htmlFor="serviceId" className={LABEL}>
                 Servicio *
               </Label>
-              <Select value={data.serviceId || undefined} onValueChange={changeService} disabled={isEdit || services.length === 0}>
-                <SelectTrigger id="serviceId" className={cn(FIELD, 'w-full', errors.serviceId && 'border-bad')}>
-                  <SelectValue placeholder={services.length === 0 ? 'Sin servicios activos' : 'Selecciona un servicio'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} ({s.code}) · {s.maxProfiles} perfiles
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="serviceId"
+                options={services.map((s) => ({ value: s.id, label: `${s.name} (${s.code}) · ${s.maxProfiles} perfiles` }))}
+                value={data.serviceId || null}
+                onChange={(value) => value && changeService(value)}
+                disabled={isEdit || services.length === 0}
+                placeholder={services.length === 0 ? 'Sin servicios activos' : 'Selecciona un servicio'}
+                searchPlaceholder="Buscar servicio..."
+                emptyText="No hay servicios activos"
+                aria-invalid={Boolean(errors.serviceId)}
+                className={cn(FIELD, errors.serviceId && 'border-bad')}
+              />
               {isEdit && <p className="text-muted-foreground text-xs">El servicio no puede cambiarse en una cuenta existente.</p>}
               <FieldError messages={errors.serviceId} />
             </div>
@@ -163,18 +163,16 @@ export function AccountForm() {
               <Label htmlFor="status" className={LABEL}>
                 Estado *
               </Label>
-              <Select value={data.status} onValueChange={(value) => setData('status', value as AccountStatus)}>
-                <SelectTrigger id="status" className={cn(FIELD, 'w-full', errors.status && 'border-bad')}>
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACCOUNT_STATUSES.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {ACCOUNT_STATUS_LABELS[status]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="status"
+                options={ACCOUNT_STATUSES.map((status) => ({ value: status, label: ACCOUNT_STATUS_LABELS[status] }))}
+                value={data.status}
+                onChange={(value) => value && setData('status', value as AccountStatus)}
+                placeholder="Estado"
+                emptyText="Sin resultados"
+                aria-invalid={Boolean(errors.status)}
+                className={cn(FIELD, errors.status && 'border-bad')}
+              />
               <FieldError messages={errors.status} />
             </div>
 
@@ -245,18 +243,14 @@ export function AccountForm() {
                   </div>
                   {isEdit && (
                     <div>
-                      <Select value={row.status} onValueChange={(value) => setProfile(index, 'status', value as ProfileStatus)}>
-                        <SelectTrigger aria-label={`Estado del perfil ${row.number}`} className="h-[38px] w-full rounded-[10px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROFILE_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {PROFILE_STATUS_LABELS[status]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        aria-label={`Estado del perfil ${row.number}`}
+                        options={PROFILE_STATUSES.map((status) => ({ value: status, label: PROFILE_STATUS_LABELS[status] }))}
+                        value={row.status}
+                        onChange={(value) => value && setProfile(index, 'status', value as ProfileStatus)}
+                        emptyText="Sin resultados"
+                        className="h-[38px] rounded-[10px]"
+                      />
                       <FieldError messages={errors[`profiles.${index}.status`]} className="mt-1 text-xs" />
                     </div>
                   )}

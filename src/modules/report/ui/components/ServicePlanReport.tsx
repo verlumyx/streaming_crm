@@ -7,7 +7,7 @@ import { PageShell } from '@/components/page-shell';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { decimal } from '@/lib/format';
 import { reportRoutes } from '@/modules/report/routes';
@@ -66,28 +66,31 @@ export function ServicePlanReport({ companyId, searched, rows, summary, meta, fi
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-group-by">Agrupar por</Label>
-            <Select value={filters.groupBy} onValueChange={(v) => setFilters({ ...filters, groupBy: v as ServicePlanGroup })}>
-              <SelectTrigger id="filter-group-by" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="service">Servicio</SelectItem>
-                <SelectItem value="plan">Plan</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-group-by"
+              options={[
+                { value: 'service', label: 'Servicio' },
+                { value: 'plan', label: 'Plan' },
+              ]}
+              value={filters.groupBy}
+              onChange={(v) => v && setFilters({ ...filters, groupBy: v as ServicePlanGroup })}
+              emptyText="Sin resultados"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-capacity">Capacidad</Label>
-            <Select value={filters.capacity ?? 'all'} onValueChange={(v) => setFilters({ ...filters, capacity: v === 'all' ? undefined : v })}>
-              <SelectTrigger id="filter-capacity" className="w-full">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="profile">Perfil</SelectItem>
-                <SelectItem value="full_account">Cuenta completa</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="filter-capacity"
+              options={[
+                { value: 'all', label: 'Todas' },
+                { value: 'profile', label: 'Perfil' },
+                { value: 'full_account', label: 'Cuenta completa' },
+              ]}
+              value={filters.capacity ?? 'all'}
+              onChange={(v) => setFilters({ ...filters, capacity: !v || v === 'all' ? undefined : v })}
+              placeholder="Todas"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <ReportFilterActions pending={pending} onSearch={search} onClear={clear} />

@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { formatDate } from '@/lib/format';
 import { companyRoutes } from '@/modules/company/routes';
 import { updateCompanyStatusAction } from '@/app/[companyId]/companies/actions';
@@ -95,24 +95,23 @@ export function CompanyList({ companyId, companies, meta, filters: initialFilter
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-status">Estado</Label>
-            <Select
+            <SearchableSelect
+              id="filter-status"
+              options={[
+                { value: 'todos', label: 'Todos' },
+                { value: 'active', label: 'Activas' },
+                { value: 'inactive', label: 'Inactivas' },
+              ]}
               value={filters.status ?? 'todos'}
-              onValueChange={(value) =>
+              onChange={(value) =>
                 applyFilters({
                   ...filters,
-                  status: value === 'todos' ? undefined : (value as CompanyFilters['status']),
+                  status: !value || value === 'todos' ? undefined : (value as CompanyFilters['status']),
                 })
               }
-            >
-              <SelectTrigger id="filter-status" className="w-full">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="active">Activas</SelectItem>
-                <SelectItem value="inactive">Inactivas</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Estado"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

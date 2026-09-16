@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   DEFAULT_PAGE_SIZE,
   PAGE_SIZE_OPTIONS,
@@ -37,18 +37,15 @@ export function ListPagination({ meta, href }: ListPaginationProps) {
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
         <span>Mostrar</span>
-        <Select value={String(meta.limit)} onValueChange={changePageSize}>
-          <SelectTrigger size="sm" className="bg-card tabular-nums" aria-label="Registros por página">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <SelectItem key={size} value={String(size)}>
-                {size}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          aria-label="Registros por página"
+          options={PAGE_SIZE_OPTIONS.map((size) => ({ value: String(size), label: String(size) }))}
+          value={String(meta.limit)}
+          onChange={(value) => value && changePageSize(value)}
+          emptyText="Sin resultados"
+          className="bg-card h-8 w-20 tabular-nums"
+          contentClassName="w-40"
+        />
       </div>
 
       {totalPages > 1 && (

@@ -17,7 +17,7 @@ import { ListPagination } from '@/components/list-pagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { serviceRoutes } from '@/modules/service/routes';
 import type { ServiceDto } from '@/modules/service/serializers/service.serializer';
 import type { ServiceFilters, ServiceMeta } from '../types/Service';
@@ -66,21 +66,23 @@ export function ServiceList({ companyId, services, meta, filters: initialFilters
           ))}
           <div className="space-y-2">
             <Label htmlFor="filter-active">Estado</Label>
-            <Select
+            <SearchableSelect
+              id="filter-active"
+              options={[
+                { value: 'all', label: 'Todos' },
+                { value: '1', label: 'Activos' },
+                { value: '0', label: 'Inactivos' },
+              ]}
               value={filters.active ?? 'all'}
-              onValueChange={(value) =>
-                applyFilters({ ...filters, active: value === 'all' ? undefined : (value as ServiceFilters['active']) })
+              onChange={(value) =>
+                applyFilters({
+                  ...filters,
+                  active: !value || value === 'all' ? undefined : (value as ServiceFilters['active']),
+                })
               }
-            >
-              <SelectTrigger id="filter-active" className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="1">Activos</SelectItem>
-                <SelectItem value="0">Inactivos</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Todos"
+              emptyText="Sin resultados"
+            />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">
