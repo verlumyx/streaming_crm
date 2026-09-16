@@ -1,11 +1,11 @@
-import { addDays, todayIsoDate } from '@/lib/format';
+import { todayIsoDate } from '@/lib/format';
 import { uuidv7 } from '@/modules/shared/uuid';
 import { CreateTransactionCommand } from '@/modules/transaction/commands/create-transaction.command';
 import type { TransactionRepository } from '@/modules/transaction/repositories/transaction.repository';
 import type { SaleRow } from '../models/sale.model';
 import type { SaleRepository } from '../repositories/sale.repository';
 import type { RenewSaleCommand } from '../commands/renew-sale.command';
-import { canBeRenewed } from '../domain/sale-rules';
+import { canBeRenewed, saleEndDate } from '../domain/sale-rules';
 import { SaleNotFoundException } from '../exceptions/sale-not-found.exception';
 import { SaleCannotBeRenewedException } from '../exceptions/sale-cannot-be-renewed.exception';
 
@@ -27,7 +27,7 @@ export class SaleRenewService {
 
     const durationDays = command.durationDays ?? sale.durationDays;
     const price = command.price ?? Number(sale.price);
-    const newEndDate = addDays(sale.endDate, durationDays);
+    const newEndDate = saleEndDate(sale.endDate, durationDays);
 
     await this.repository.renew(sale, {
       id: command.id,

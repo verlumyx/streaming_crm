@@ -7,7 +7,7 @@ import { StatusPill } from '@/components/status-pill';
 import { WhatsAppAction, WhatsAppButton } from '@/components/whatsapp-button';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { fmtFecha, mesesDesde } from '@/lib/dates';
 import { clientRoutes } from '@/modules/client/routes';
 import { saleRoutes } from '@/modules/sale/routes';
@@ -103,14 +103,14 @@ export function ClientShow({ companyId, client, sales, metrics, canUpdate, canUp
       </Card>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <MiniStat label="Ingreso mensual" value={clp(metrics.monthlyIncome)} />
+        <MiniStat label="Ingreso mensual" value={money(metrics.monthlyIncome)} />
         <MiniStat label="Perfiles activos" value={activeCount} />
         <MiniStat
           label="Deuda pendiente"
-          value={clp(metrics.pendingDebt)}
+          value={money(metrics.pendingDebt)}
           accent={metrics.pendingDebt > 0 ? 'bad' : 'default'}
         />
-        <MiniStat label="Total pagado (histórico)" value={clp(metrics.totalPaid)} />
+        <MiniStat label="Total pagado (histórico)" value={money(metrics.totalPaid)} />
       </div>
 
       <div className="flex min-w-0 flex-col gap-5">
@@ -144,7 +144,7 @@ export function ClientShow({ companyId, client, sales, metrics, canUpdate, canUp
                     <Row label="Cuenta">
                       <span className="max-w-[165px] truncate font-mono text-[11.5px]">{sale.accountEmail ?? '—'}</span>
                     </Row>
-                    <Row label="Precio">{clp(sale.price)}</Row>
+                    <Row label="Precio">{money(sale.price)}</Row>
                     <Row label="Vence">{fmtFecha(new Date(`${sale.endDate}T00:00:00`))}</Row>
                   </div>
                   <div className="mt-0.5 flex gap-2">

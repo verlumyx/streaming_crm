@@ -1,11 +1,10 @@
-import { addDays } from '@/lib/format';
 import { uuidv7 } from '@/modules/shared/uuid';
 import { CreateTransactionCommand } from '@/modules/transaction/commands/create-transaction.command';
 import type { TransactionRepository } from '@/modules/transaction/repositories/transaction.repository';
 import type { SaleRow } from '../models/sale.model';
 import type { SaleRepository } from '../repositories/sale.repository';
 import type { CreateSaleCommand } from '../commands/create-sale.command';
-import { profileCoherenceError, unavailableProfiles } from '../domain/sale-rules';
+import { profileCoherenceError, saleEndDate, unavailableProfiles } from '../domain/sale-rules';
 import { SaleClientNotFoundException } from '../exceptions/sale-client-not-found.exception';
 import { SaleClientInactiveException } from '../exceptions/sale-client-inactive.exception';
 import { SalePlanNotFoundException } from '../exceptions/sale-plan-not-found.exception';
@@ -16,6 +15,9 @@ import { SaleProfilesUnavailableException } from '../exceptions/sale-profiles-un
  * Crear (runs inside the action's transaction): active client of the company, plan of the company,
  * profiles locked `FOR UPDATE` and checked for coherence + availability, plan snapshot,
  * `endDate = startDate + durationDays`, pivot rows + occupied profiles, and the `sale` ledger income.
+ *
+ * A `profile` plan with N profiles registers N sales (one profile each, all or nothing): the first one
+ * keeps `command.id`, the rest get a fresh UUID v7. A `full_account` plan always registers a single sale.
  */
 export class SaleCreateService {
   constructor(
@@ -23,7 +25,7 @@ export class SaleCreateService {
     private readonly transactionRepository: TransactionRepository,
   ) {}
 
-  async execute(command: CreateSaleCommand): Promise<SaleRow> {
+  async execute(command: CreateSaleCommand): Promise<SaleRow[]> {
     const client = await this.repository.findClient(command.clientId, command.companyId);
     if (!client) throw new SaleClientNotFoundException();
     if (client.status !== 'active') throw new SaleClientInactiveException();
@@ -31,56 +33,78 @@ export class SaleCreateService {
     const plan = await this.repository.findPlan(command.planId, command.companyId);
     if (!plan) throw new SalePlanNotFoundException();
 
+    if (new Set(command.profileIds).size !== command.profileIds.length) {
+      throw new SaleInvalidProfilesException('Uno o más perfiles no existen.');
+    }
+
     const locked = await this.repository.lockProfiles(command.profileIds);
-    const incoherence = profileCoherenceError(command.profileIds, locked, {
+    const target = {
       companyId: command.companyId,
       serviceId: plan.serviceId,
       capacity: plan.capacity,
       maxProfiles: plan.maxProfiles,
-    });
-    if (incoherence) throw new SaleInvalidProfilesException(incoherence);
+    };
+    // Profiles each registered sale occupies: one per profile for `profile` plans, all of them for `full_account`.
+    const profileGroups =
+      plan.capacity === 'profile' ? command.profileIds.map((id) => [id]) : [[...command.profileIds]];
+
+    for (const group of profileGroups) {
+      const incoherence = profileCoherenceError(
+        group,
+        locked.filter((p) => group.includes(p.id)),
+        target,
+      );
+      if (incoherence) throw new SaleInvalidProfilesException(incoherence);
+    }
 
     const unavailable = unavailableProfiles(locked);
     if (unavailable.length > 0) throw new SaleProfilesUnavailableException(unavailable);
 
     // Plan snapshot: the sale never reads these values from the plan again.
     const price = Number(plan.salePrice);
-    const endDate = addDays(command.startDate, plan.durationDays);
+    const endDate = saleEndDate(command.startDate, plan.durationDays);
 
-    await this.repository.create({
-      id: command.id,
-      companyId: command.companyId,
-      clientId: client.id,
-      planId: plan.id,
-      agentId: command.agentId,
-      serviceId: plan.serviceId,
-      capacity: plan.capacity,
-      durationDays: plan.durationDays,
-      price,
-      startDate: command.startDate,
-      endDate,
-      notes: command.notes,
-    });
-    await this.repository.assignProfiles(command.id, command.profileIds);
+    const created: SaleRow[] = [];
+    for (const [index, profileIds] of profileGroups.entries()) {
+      const saleId = index === 0 ? command.id : uuidv7();
 
-    await this.transactionRepository.create(
-      new CreateTransactionCommand(
-        uuidv7(),
-        command.companyId,
-        'sale',
+      await this.repository.create({
+        id: saleId,
+        companyId: command.companyId,
+        clientId: client.id,
+        planId: plan.id,
+        agentId: command.agentId,
+        serviceId: plan.serviceId,
+        capacity: plan.capacity,
+        durationDays: plan.durationDays,
         price,
-        command.startDate,
-        `Venta ${plan.serviceName} a ${client.name}`,
-        {
-          relatedType: 'Sale',
-          relatedId: command.id,
-          periodFrom: command.startDate,
-          periodTo: endDate,
-          recordedBy: command.agentId,
-        },
-      ),
-    );
+        startDate: command.startDate,
+        endDate,
+        notes: command.notes,
+      });
+      await this.repository.assignProfiles(saleId, profileIds);
 
-    return this.repository.findOrFail(command.id, command.companyId);
+      await this.transactionRepository.create(
+        new CreateTransactionCommand(
+          uuidv7(),
+          command.companyId,
+          'sale',
+          price,
+          command.startDate,
+          `Venta ${plan.serviceName} a ${client.name}`,
+          {
+            relatedType: 'Sale',
+            relatedId: saleId,
+            periodFrom: command.startDate,
+            periodTo: endDate,
+            recordedBy: command.agentId,
+          },
+        ),
+      );
+
+      created.push(await this.repository.findOrFail(saleId, command.companyId));
+    }
+
+    return created;
   }
 }

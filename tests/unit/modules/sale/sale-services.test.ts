@@ -10,6 +10,7 @@ import { ReactivateSaleCommand } from '@/modules/sale/commands/reactivate-sale.c
 import { CancelSaleCommand } from '@/modules/sale/commands/cancel-sale.command';
 import { SaleClientInactiveException } from '@/modules/sale/exceptions/sale-client-inactive.exception';
 import { SalePlanNotFoundException } from '@/modules/sale/exceptions/sale-plan-not-found.exception';
+import { SaleInvalidProfilesException } from '@/modules/sale/exceptions/sale-invalid-profiles.exception';
 import { SaleProfilesUnavailableException } from '@/modules/sale/exceptions/sale-profiles-unavailable.exception';
 import { SaleCannotBeRenewedException } from '@/modules/sale/exceptions/sale-cannot-be-renewed.exception';
 import { SaleCannotBeReactivatedException } from '@/modules/sale/exceptions/sale-cannot-be-reactivated.exception';
@@ -70,7 +71,7 @@ describe('SaleCreateService', () => {
   });
 
   it('snapshots the plan, computes the end date, occupies the profile and records the sale income', async () => {
-    const sale = await service.execute(createCommand());
+    const [sale] = await service.execute(createCommand());
 
     expect(sale).toMatchObject({
       code: 'SAL000001',
@@ -91,6 +92,39 @@ describe('SaleCreateService', () => {
       description: 'Venta Netflix a Camila',
       options: { relatedType: 'Sale', relatedId: 'sale-new', periodFrom: '2026-09-10', periodTo: '2026-10-10', recordedBy: 'agent-1' },
     });
+  });
+
+  it('a profile plan with several profiles registers one sale per profile', async () => {
+    const created = await service.execute(createCommand({ profileIds: ['profile-1', 'profile-2'] }));
+
+    expect(created.map((s) => s.code)).toEqual(['SAL000001', 'SAL000002']);
+    expect(created[0].id).toBe('sale-new');
+    expect(created[1].id).not.toBe('sale-new');
+    expect(created.every((s) => s.price === '12.50' && s.clientId === 'client-1')).toBe(true);
+    expect(repository.profile('profile-1').status).toBe('occupied');
+    expect(repository.profile('profile-2').status).toBe('occupied');
+    expect(ledger.created.map((t) => t.options?.relatedId)).toEqual(created.map((s) => s.id));
+  });
+
+  it('reports every unavailable profile of a multi-profile sale and writes nothing', async () => {
+    repository.profile('profile-2').status = 'occupied';
+    repository.profile('profile-3').status = 'maintenance';
+
+    const error = await service
+      .execute(createCommand({ profileIds: ['profile-1', 'profile-2', 'profile-3'] }))
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(SaleProfilesUnavailableException);
+    expect(error.unavailableProfiles.map((p: { id: string }) => p.id)).toEqual(['profile-2', 'profile-3']);
+    expect(repository.sales).toHaveLength(0);
+    expect(ledger.created).toHaveLength(0);
+  });
+
+  it('rejects the same profile repeated', async () => {
+    await expect(
+      service.execute(createCommand({ profileIds: ['profile-1', 'profile-1'] })),
+    ).rejects.toBeInstanceOf(SaleInvalidProfilesException);
+    expect(repository.sales).toHaveLength(0);
   });
 
   it('rejects inactive clients and unknown plans before touching profiles', async () => {

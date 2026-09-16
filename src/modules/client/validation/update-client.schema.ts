@@ -4,7 +4,7 @@ import { optionalEmail, optionalText, requiredText } from '@/modules/shared/vali
 /** Actualizar. Also the base of the create schema. */
 export const updateClientSchema = z.object({
   name: requiredText('El nombre', 150),
-  phone: optionalText('El teléfono', 30),
+  phone: requiredText('El teléfono', 30),
   email: optionalEmail(255),
   notes: optionalText('La nota'),
 });

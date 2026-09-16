@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormSectionHead } from '@/components/form-section-head';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ACCOUNT_STATUSES, PROFILE_STATUSES, type AccountStatus, type ProfileStatus } from '@/modules/account/models/account.model';
 import { ACCOUNT_STATUS_LABELS, PROFILE_STATUS_LABELS } from '../account-labels';
@@ -290,7 +290,7 @@ export function AccountForm() {
           <SummaryRow label="Perfiles">{data.profiles.length}</SummaryRow>
           <div className="border-input flex items-center justify-between border-t border-dashed pt-2.5 text-[15px]">
             <span className="text-muted-foreground font-medium">Costo</span>
-            <b className="font-bold tabular-nums">{clp(data.cost)}</b>
+            <b className="font-bold tabular-nums">{money(data.cost)}</b>
           </div>
         </div>
         <Button

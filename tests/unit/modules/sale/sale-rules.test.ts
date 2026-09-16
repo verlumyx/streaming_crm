@@ -7,6 +7,7 @@ import {
   profileCoherenceError,
   profileLabel,
   requiredProfileCount,
+  saleEndDate,
   unavailableProfiles,
   type LockedProfile,
 } from '@/modules/sale/domain/sale-rules';
@@ -120,5 +121,27 @@ describe('sale rules: profile coherence and availability', () => {
       'p3',
     ]);
     expect(unavailableProfiles([own]).map((p) => p.id)).toEqual(['p1']);
+  });
+});
+
+describe('sale rules: end date', () => {
+  it('a 30-day duration renews on the same day of the next month', () => {
+    expect(saleEndDate('2026-09-16', 30)).toBe('2026-10-16');
+    expect(saleEndDate('2026-10-15', 30)).toBe('2026-11-15');
+    expect(saleEndDate('2026-12-31', 30)).toBe('2027-01-31');
+  });
+
+  it('a 30-day sale made on a day the next month lacks renews on its last day', () => {
+    expect(saleEndDate('2026-10-31', 30)).toBe('2026-11-30');
+    expect(saleEndDate('2026-01-31', 30)).toBe('2026-02-28');
+    expect(saleEndDate('2026-01-30', 30)).toBe('2026-02-28');
+    expect(saleEndDate('2028-01-31', 30)).toBe('2028-02-29');
+  });
+
+  it('other durations add calendar days', () => {
+    expect(saleEndDate('2026-09-16', 1)).toBe('2026-09-17');
+    expect(saleEndDate('2026-09-16', 3)).toBe('2026-09-19');
+    expect(saleEndDate('2026-09-16', 7)).toBe('2026-09-23');
+    expect(saleEndDate('2026-09-16', 15)).toBe('2026-10-01');
   });
 });

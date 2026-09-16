@@ -26,7 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { clp, formatDate } from '@/lib/format';
+import { money, formatDate } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import type { SaleStatus } from '@/modules/sale/models/sale.model';
 import { SALE_PERMISSIONS } from '@/modules/sale/permissions';
@@ -203,7 +203,7 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
                 <span className="font-semibold tabular-nums">{formatDate(sale.endDate)}</span>
               </div>
               <div className="hidden lg:block">
-                <span className="font-bold tabular-nums">{clp(sale.price)}</span>
+                <span className="font-bold tabular-nums">{money(sale.price)}</span>
               </div>
               <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>

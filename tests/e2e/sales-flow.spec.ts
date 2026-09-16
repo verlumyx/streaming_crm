@@ -21,6 +21,7 @@ test('sell a profile with the wizard, renew, expel with a refund and reactivate'
   // --- Prerequisites through the UI: client, plan and account on Netflix ---
   await page.goto(`/${companyId}/clients/create`);
   await page.locator('#name').fill(clientName);
+  await page.locator('#phone-number').fill('4121234567');
   await submitForm(page);
   await expect(page.getByText('Cliente creado correctamente.')).toBeVisible();
 
@@ -31,7 +32,8 @@ test('sell a profile with the wizard, renew, expel with a refund and reactivate'
   await page.locator('#name').fill(planName);
   await page.locator('#capacity').click();
   await page.getByRole('option', { name: 'Perfil', exact: true }).click();
-  await page.locator('#duration-days').fill('30');
+  await page.locator('#duration-days').click();
+  await page.getByRole('option', { name: '30 días', exact: true }).click();
   await fillCurrency(page, '#sale-price', '12');
   await page.locator('#roi-target-pct').fill('25');
   await submitForm(page);
@@ -94,4 +96,29 @@ test('sell a profile with the wizard, renew, expel with a refund and reactivate'
   await expect(page.getByText('Venta reactivada correctamente.')).toBeVisible();
   await expect(page.getByText('Activa').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reactivar' })).toHaveCount(0);
+
+  // --- Several profiles of a "Perfil" plan: one sale per profile ---
+  await page.goto(`/${companyId}/sales/create`);
+  await page.locator('#client-search').fill(clientName);
+  await page
+    .getByRole('button', { name: new RegExp(clientName) })
+    .first()
+    .click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page
+    .getByRole('button', { name: new RegExp(planName) })
+    .first()
+    .click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+
+  const group = page
+    .getByText(accountEmail, { exact: true })
+    .locator('xpath=ancestor::*[.//button[@aria-pressed]][1]');
+  await group.getByRole('button', { name: 'Perfil 2', exact: true }).click();
+  await group.getByRole('button', { name: 'Perfil 3', exact: true }).click();
+  await expect(page.getByText('2 ventas · $24')).toBeVisible();
+  await page.getByRole('button', { name: 'Registrar 2 ventas' }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/${companyId}/sales\\?clientId=`), { timeout: 30_000 });
+  await expect(page.getByText('2 ventas registradas correctamente.')).toBeVisible();
 });

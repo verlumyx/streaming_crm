@@ -9,7 +9,7 @@ import { MiniStat } from '@/components/mini-stat';
 import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { clp, formatDate, formatDateTime } from '@/lib/format';
+import { money, formatDate, formatDateTime } from '@/lib/format';
 import type { ActionState } from '@/modules/shared/actions/action-state';
 import { TRANSACTION_CATEGORY_LABELS } from '@/modules/transaction/models/transaction.model';
 import { saleRoutes } from '@/modules/sale/routes';
@@ -108,7 +108,7 @@ export function RefundShow({ companyId, refund, canUpdate, canApprove, canReject
       ) : (
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <MiniStat label="Monto" value={clp(refund.amount)} icon={DollarSign} />
+            <MiniStat label="Monto" value={money(refund.amount)} icon={DollarSign} />
             <MiniStat label="Venta" value={refund.sale?.code ?? '—'} icon={ShoppingCart} />
             <MiniStat
               label="Resuelto"
@@ -142,7 +142,7 @@ export function RefundShow({ companyId, refund, canUpdate, canApprove, canReject
                       {formatDate(transaction.date)} · {TRANSACTION_CATEGORY_LABELS[transaction.category]}
                     </span>
                   </div>
-                  <span className="text-bad font-bold tabular-nums">-{clp(transaction.amount)}</span>
+                  <span className="text-bad font-bold tabular-nums">-{money(transaction.amount)}</span>
                 </div>
               ))}
               {refund.transactions.length === 0 && (

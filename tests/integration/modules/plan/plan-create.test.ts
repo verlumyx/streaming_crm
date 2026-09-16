@@ -114,20 +114,30 @@ describe('Crear plan', () => {
     expect(result.fieldErrors?.capacity?.[0]).toBe('La capacidad no es válida.');
   });
 
-  it('the duration must be an integer of at least 1 day', async () => {
+  it('the duration must be one of the allowed values', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    const service = await createService(db, { companyId: company.id });
+    setSessionUser(user);
+    const durationError = async (durationDays: number | string) =>
+      (await create(company.id, payload(service.id, { durationDays }))).fieldErrors?.durationDays?.[0];
+
+    for (const invalid of [0, 2, 31, 90, '1.5']) {
+      expect(await durationError(invalid)).toBe('La duración debe ser 1, 3, 7, 15 o 30 días.');
+    }
+    expect(await durationError('')).toBe('La duración es obligatorio.');
+  });
+
+  it('every allowed duration can be saved', async () => {
     const { user, company } = await createUserWithCompany(db);
     const service = await createService(db, { companyId: company.id });
     setSessionUser(user);
 
-    expect((await create(company.id, payload(service.id, { durationDays: 0 }))).fieldErrors?.durationDays?.[0]).toBe(
-      'La duración debe ser al menos 1 día.',
-    );
-    expect((await create(company.id, payload(service.id, { durationDays: '' }))).fieldErrors?.durationDays?.[0]).toBe(
-      'La duración es obligatorio.',
-    );
-    expect(
-      (await create(company.id, payload(service.id, { durationDays: '1.5' }))).fieldErrors?.durationDays?.[0],
-    ).toBe('La duración debe ser un número entero de días.');
+    for (const durationDays of [1, 3, 7, 15, 30]) {
+      await expectRedirect(create(company.id, payload(service.id, { durationDays })), `/${company.id}/plans`);
+    }
+
+    const saved = await db.select({ durationDays: plans.durationDays }).from(plans);
+    expect(saved.map((p) => p.durationDays).sort((a, b) => a - b)).toEqual([1, 3, 7, 15, 30]);
   });
 
   it('the sale price and the ROI target cannot be negative', async () => {

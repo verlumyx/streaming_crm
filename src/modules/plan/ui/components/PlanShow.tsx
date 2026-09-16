@@ -5,10 +5,10 @@ import { MiniStat } from '@/components/mini-stat';
 import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { planRoutes } from '@/modules/plan/routes';
 import type { PlanDto } from '@/modules/plan/serializers/plan.serializer';
-import { PLAN_CAPACITY_LABELS } from '../plan-labels';
+import { PLAN_CAPACITY_LABELS, planDurationLabel } from '../plan-labels';
 import { PlanStatusButton } from './PlanStatusButton';
 
 type Props = {
@@ -67,8 +67,8 @@ export function PlanShow({ companyId, plan, canUpdate, canUpdateStatus }: Props)
       </Card>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <MiniStat label="Precio de venta" value={clp(plan.salePrice)} icon={DollarSign} />
-        <MiniStat label="Duración" value={`${plan.durationDays} días`} icon={CalendarClock} />
+        <MiniStat label="Precio de venta" value={money(plan.salePrice)} icon={DollarSign} />
+        <MiniStat label="Duración" value={planDurationLabel(plan.durationDays)} icon={CalendarClock} />
         <MiniStat label="Meta ROI" value={percentLabel(plan.roiTargetPct)} icon={Target} />
         <MiniStat label="Capacidad" value={PLAN_CAPACITY_LABELS[plan.capacity]} icon={Package} />
       </div>

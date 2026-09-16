@@ -20,7 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import type { ActionState } from '@/modules/shared/actions/action-state';
 import { REFUND_STATUSES } from '@/modules/refund/models/refund.model';
@@ -147,7 +147,7 @@ export function RefundList({ companyId, refunds: items, meta, filters: initialFi
                 <span className="text-[13.5px] font-semibold tabular-nums">{refund.sale?.code ?? '—'}</span>
               </div>
               <div className="hidden lg:block">
-                <span className="font-bold tabular-nums">{clp(refund.amount)}</span>
+                <span className="font-bold tabular-nums">{money(refund.amount)}</span>
               </div>
               <div className="hidden lg:block">
                 <StatusPill kind={refundStatusPill(refund.status)}>{REFUND_STATUS_LABELS[refund.status]}</StatusPill>

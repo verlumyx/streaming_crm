@@ -14,7 +14,7 @@ const COMPANY = '0192f3a0-0000-7000-8000-00000000c001';
 const OTHER_COMPANY = '0192f3a0-0000-7000-8000-00000000c002';
 
 const newClient = (id: string, email: string | null = null, companyId = COMPANY) =>
-  new CreateClientCommand(id, companyId, null, `Cliente ${id.slice(-2)}`, null, email, null);
+  new CreateClientCommand(id, companyId, null, `Cliente ${id.slice(-2)}`, '+58 4121234567', email, null);
 
 describe('ClientCreateService', () => {
   it('creates an active client', async () => {

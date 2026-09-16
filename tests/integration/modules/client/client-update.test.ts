@@ -34,13 +34,30 @@ describe('Actualizar cliente', () => {
     expect(row.code).toBe(client.code);
   });
 
+  it('the phone is required when updating', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    const client = await createClient(db, { companyId: company.id, phone: '+58 111' });
+    setSessionUser(user);
+
+    const result = await updateClientAction(
+      company.id,
+      client.id,
+      initialActionState,
+      formData({ name: 'Sin teléfono', phone: '' }),
+    );
+
+    expect(result.fieldErrors?.phone?.[0]).toBe('El teléfono es obligatorio.');
+    const [row] = await db.select().from(clients).where(eq(clients.id, client.id));
+    expect(row.phone).toBe('+58 111');
+  });
+
   it('a client keeps its own email when updating', async () => {
     const { user, company } = await createUserWithCompany(db);
     const client = await createClient(db, { companyId: company.id, email: 'mio@example.com' });
     setSessionUser(user);
 
     await expectRedirect(
-      updateClientAction(company.id, client.id, initialActionState, formData({ name: 'Igual', email: 'mio@example.com' })),
+      updateClientAction(company.id, client.id, initialActionState, formData({ name: 'Igual', phone: '+58 999', email: 'mio@example.com' })),
       `/${company.id}/clients/${client.id}`,
     );
   });
@@ -55,7 +72,7 @@ describe('Actualizar cliente', () => {
       company.id,
       client.id,
       initialActionState,
-      formData({ name: 'X', email: 'tomado@example.com' }),
+      formData({ name: 'X', phone: '+58 999', email: 'tomado@example.com' }),
     );
 
     expect(result.fieldErrors?.email?.[0]).toBe('Ya existe un cliente con este correo.');
@@ -65,7 +82,7 @@ describe('Actualizar cliente', () => {
     const { user, company } = await createUserWithCompany(db);
     setSessionUser(user);
 
-    const result = await updateClientAction(company.id, uuidv7(), initialActionState, formData({ name: 'X' }));
+    const result = await updateClientAction(company.id, uuidv7(), initialActionState, formData({ name: 'X', phone: '+58 999' }));
 
     expect(result).toMatchObject({ status: 'error', message: 'Cliente no encontrado.' });
   });
@@ -76,7 +93,7 @@ describe('Actualizar cliente', () => {
     await assignRoleWithPermissions(db, user.id, company.id, ['clients.show']);
     setSessionUser(user);
 
-    const result = await updateClientAction(company.id, client.id, initialActionState, formData({ name: 'Hackeado' }));
+    const result = await updateClientAction(company.id, client.id, initialActionState, formData({ name: 'Hackeado', phone: '+58 999' }));
 
     expect(result.status).toBe('error');
     const [row] = await db.select().from(clients).where(eq(clients.id, client.id));

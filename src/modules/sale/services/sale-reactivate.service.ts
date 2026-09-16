@@ -1,11 +1,11 @@
-import { addDays, todayIsoDate } from '@/lib/format';
+import { todayIsoDate } from '@/lib/format';
 import { uuidv7 } from '@/modules/shared/uuid';
 import { CreateTransactionCommand } from '@/modules/transaction/commands/create-transaction.command';
 import type { TransactionRepository } from '@/modules/transaction/repositories/transaction.repository';
 import type { SaleRow } from '../models/sale.model';
 import type { SaleRepository } from '../repositories/sale.repository';
 import type { ReactivateSaleCommand } from '../commands/reactivate-sale.command';
-import { canBeReactivated, profileCoherenceError, unavailableProfiles } from '../domain/sale-rules';
+import { canBeReactivated, profileCoherenceError, saleEndDate, unavailableProfiles } from '../domain/sale-rules';
 import { SaleNotFoundException } from '../exceptions/sale-not-found.exception';
 import { SaleCannotBeReactivatedException } from '../exceptions/sale-cannot-be-reactivated.exception';
 import { SaleInvalidProfilesException } from '../exceptions/sale-invalid-profiles.exception';
@@ -57,7 +57,7 @@ export class SaleReactivateService {
 
     const durationDays = command.durationDays ?? sale.durationDays;
     const price = command.price ?? Number(sale.price);
-    const newEndDate = addDays(today, durationDays);
+    const newEndDate = saleEndDate(today, durationDays);
 
     await this.repository.replaceProfiles(
       sale.id,

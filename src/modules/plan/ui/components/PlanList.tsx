@@ -26,7 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import { PLAN_CAPACITIES } from '@/modules/plan/models/plan.model';
 import { PLAN_PERMISSIONS } from '@/modules/plan/permissions';
@@ -35,7 +35,7 @@ import { updatePlanStatusAction } from '@/app/[companyId]/plans/actions';
 import type { PlanDto } from '@/modules/plan/serializers/plan.serializer';
 import type { ServiceOptionDto } from '@/modules/service/serializers/service.serializer';
 import type { PlanFilters, PlanMeta } from '../types/Plan';
-import { PLAN_CAPACITY_LABELS } from '../plan-labels';
+import { PLAN_CAPACITY_LABELS, planDurationLabel } from '../plan-labels';
 
 const COLUMNS = 'lg:grid-cols-[0.9fr_2.2fr_1.1fr_0.9fr_1fr_0.9fr_0.9fr]';
 
@@ -205,10 +205,10 @@ export function PlanList({ companyId, plans, services, meta, filters: initialFil
                 <span className="text-[13.5px] font-semibold">{PLAN_CAPACITY_LABELS[plan.capacity]}</span>
               </div>
               <div className="hidden lg:block">
-                <span className="font-semibold tabular-nums">{plan.durationDays} días</span>
+                <span className="font-semibold tabular-nums">{planDurationLabel(plan.durationDays)}</span>
               </div>
               <div className="hidden lg:block">
-                <span className="font-bold tabular-nums">{clp(plan.salePrice)}</span>
+                <span className="font-bold tabular-nums">{money(plan.salePrice)}</span>
               </div>
               <div className="hidden lg:block">
                 <StatusPill kind={plan.active ? 'activo' : 'inactivo'} />

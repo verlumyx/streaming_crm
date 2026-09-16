@@ -44,9 +44,13 @@ function revalidateSale(companyId: string, id: string): void {
   revalidatePath(saleRoutes.show(companyId, id));
 }
 
-/** Crear (wizard) → redirects to the new sale. A `conflict` state carries `details.unavailableProfiles`. */
+/**
+ * Crear (wizard). One sale → redirects to it; several (`profile` plan with N profiles) → redirects to the
+ * client's sales. A `conflict` state carries `details.unavailableProfiles`.
+ */
 export async function createSaleAction(companyId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  let saleId: string;
+  let saleIds: string[];
+  let clientId: string;
   try {
     await requirePermission(companyId, SALE_PERMISSIONS.CREATE);
 
@@ -56,17 +60,24 @@ export async function createSaleAction(companyId: string, _prev: ActionState, fo
     const user = await getSessionUser();
     if (!user) throw new ForbiddenError(SALE_PERMISSIONS.CREATE);
 
-    await db.transaction(async (tx) => {
-      await createSaleContainer(tx).createService.execute(CreateSaleCommand.fromInput(parsed.data, companyId, user.id));
-    });
-    saleId = parsed.data.id;
+    const created = await db.transaction((tx) =>
+      createSaleContainer(tx).createService.execute(CreateSaleCommand.fromInput(parsed.data, companyId, user.id)),
+    );
+    saleIds = created.map((sale) => sale.id);
+    clientId = parsed.data.clientId;
   } catch (error) {
     return toActionError(error);
   }
 
-  revalidateSale(companyId, saleId);
-  await setFlash('success', 'Venta registrada correctamente.');
-  redirect(saleRoutes.show(companyId, saleId));
+  for (const saleId of saleIds) revalidateSale(companyId, saleId);
+
+  if (saleIds.length === 1) {
+    await setFlash('success', 'Venta registrada correctamente.');
+    redirect(saleRoutes.show(companyId, saleIds[0]));
+  }
+
+  await setFlash('success', `${saleIds.length} ventas registradas correctamente.`);
+  redirect(saleRoutes.index(companyId, { clientId }));
 }
 
 /** Renovar → redirects to the sale (or to a same-company `returnTo`). */

@@ -5,7 +5,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useRefundFormContext } from '../contexts/RefundFormContext';
 
@@ -20,7 +20,7 @@ export function RefundForm({ onCancel }: { onCancel: () => void }) {
 
   const saleOptions = sales.map((sale) => ({
     value: sale.id,
-    label: `${sale.code} · ${sale.clientName ?? '—'} · ${clp(sale.price)}`,
+    label: `${sale.code} · ${sale.clientName ?? '—'} · ${money(sale.price)}`,
   }));
 
   return (

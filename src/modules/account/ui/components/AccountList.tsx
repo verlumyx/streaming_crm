@@ -25,7 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { clp, formatDate } from '@/lib/format';
+import { money, formatDate } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import { ACCOUNT_STATUSES } from '@/modules/account/models/account.model';
 import { ACCOUNT_PERMISSIONS } from '@/modules/account/permissions';
@@ -197,7 +197,7 @@ export function AccountList({ companyId, accounts, services, meta, filters: init
                 <span className="font-semibold tabular-nums">{formatDate(account.nextRenewal)}</span>
               </div>
               <div className="hidden lg:block">
-                <span className="font-bold tabular-nums">{clp(account.cost)}</span>
+                <span className="font-bold tabular-nums">{money(account.cost)}</span>
               </div>
               <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>

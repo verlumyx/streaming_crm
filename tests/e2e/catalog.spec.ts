@@ -26,7 +26,8 @@ test('create a plan on top of a service', async ({ page }) => {
   await page.locator('#service-id').click();
   await page.getByRole('option').first().click();
   await page.locator('#name').fill(name);
-  await page.locator('#duration-days').fill('30');
+  await page.locator('#duration-days').click();
+  await page.getByRole('option', { name: '15 días', exact: true }).click();
   await page.locator('#sale-price').fill('12');
   await page.locator('#roi-target-pct').fill('25');
   await submit(page);
@@ -34,4 +35,5 @@ test('create a plan on top of a service', async ({ page }) => {
   await expect(page.getByText('Plan creado correctamente.')).toBeVisible();
   await page.goto(`/${companyId}/plans?name=${encodeURIComponent(name)}`);
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('15 días').first()).toBeVisible();
 });

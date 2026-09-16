@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { clp, formatDate } from '@/lib/format';
+import { money, formatDate } from '@/lib/format';
 import type { AccountDto, AccountRenewalDto } from '@/modules/account/serializers/account.serializer';
 import { RENEWAL_TYPE_LABELS } from '../account-labels';
 import { AccountRenewDialog } from './AccountRenewDialog';
@@ -58,7 +58,7 @@ export function AccountRenewals({ companyId, account, renewals, canRenew }: Prop
           <div key={renewal.id} className="grid grid-cols-1 items-center gap-3 border-b px-5 py-3 last:border-b-0 lg:grid-cols-4">
             <div className="font-medium tabular-nums">{formatDate(renewal.paidAt)}</div>
             <div className="text-muted-foreground text-[13.5px] font-semibold">{RENEWAL_TYPE_LABELS[renewal.type]}</div>
-            <div className="font-bold tabular-nums">{clp(renewal.amount)}</div>
+            <div className="font-bold tabular-nums">{money(renewal.amount)}</div>
             <div className="tabular-nums">{formatDate(renewal.periodEnd)}</div>
           </div>
         ))}

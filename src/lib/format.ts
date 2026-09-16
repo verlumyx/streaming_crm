@@ -1,7 +1,10 @@
-/** `$1.234,5` — bare dollar sign, es-ES grouping, 0–2 decimals. */
+/** `$12.500` / `$5,40` — es-CL grouping; two decimals only when the amount has cents. */
 export function money(n: number | string | null | undefined): string {
   const value = Number(n ?? 0);
-  return '$' + value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const decimals = Number.isInteger(value) ? 0 : 2;
+  return (
+    '$' + value.toLocaleString('es-CL', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+  );
 }
 
 /** `+12,5%` / `-3%`. */
@@ -47,15 +50,21 @@ export function addDays(isoDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Same day `months` later; when the target month is shorter, the last day of that month
+ * (`2026-01-31` + 1 → `2026-02-28`, `2026-03-31` + 1 → `2026-04-30`).
+ */
+export function addMonths(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const lastDayOfTargetMonth = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate();
+  const date = new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDayOfTargetMonth)));
+  return date.toISOString().slice(0, 10);
+}
+
 export function diffInDays(from: string, to: string): number {
   const [fy, fm, fd] = from.split('-').map(Number);
   const [ty, tm, td] = to.split('-').map(Number);
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
-}
-
-/** `$12.500` — pesos chilenos sin decimales (`es-CL`). */
-export function clp(n: number | string | null | undefined): string {
-  return '$' + Number(n ?? 0).toLocaleString('es-CL', { maximumFractionDigits: 0 });
 }
 
 /** `1.234,50` — two fixed decimals (es-VE grouping), used by reports and ledger amounts. */

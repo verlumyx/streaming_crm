@@ -3,7 +3,7 @@ import type { UpdateClientInput } from '../validation/update-client.schema';
 export class UpdateClientCommand {
   constructor(
     readonly name: string,
-    readonly phone: string | null,
+    readonly phone: string,
     readonly email: string | null,
     readonly notes: string | null,
   ) {}

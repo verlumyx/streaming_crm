@@ -1,4 +1,4 @@
-import { addDays, diffInDays } from '@/lib/format';
+import { addDays, addMonths, diffInDays } from '@/lib/format';
 import type { SaleCapacity, SaleStatus } from '../models/sale.model';
 import type { ProfileStatus } from '@/modules/account/models/account.model';
 
@@ -29,6 +29,17 @@ export function canBeReactivated(sale: SaleRuleSubject, today: string, graceDays
 /** Signed days from `today` to `endDate` (negative once expired). */
 export function daysUntilExpiration(sale: SaleRuleSubject, today: string): number {
   return diffInDays(today, sale.endDate);
+}
+
+/** A 30-day duration is a calendar month: it renews on the same day of the next month. */
+export const MONTHLY_DURATION_DAYS = 30;
+
+/**
+ * End (renewal) date of a period starting on `fromDate`. 30 days → same day of the next month, or the last day
+ * of that month when it is shorter (31 → 30, 29/30/31 of January → end of February); other durations add days.
+ */
+export function saleEndDate(fromDate: string, durationDays: number): string {
+  return durationDays === MONTHLY_DURATION_DAYS ? addMonths(fromDate, 1) : addDays(fromDate, durationDays);
 }
 
 /** Profiles a sale must occupy: 1 per `profile` sale, every profile of the account for `full_account`. */

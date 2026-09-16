@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/client';
 import { addDays } from '@/lib/format';
+import { saleEndDate } from '@/modules/sale/domain/sale-rules';
 import { initialActionState } from '@/modules/shared/actions/action-state';
 import { uuidv7 } from '@/modules/shared/uuid';
 import { renewSaleAction } from '@/app/[companyId]/sales/actions';
@@ -45,7 +46,7 @@ describe('Renovar venta', () => {
     );
 
     const row = await reloadSale(sale.id);
-    expect(row).toMatchObject({ status: 'active', endDate: addDays(endDate, 30), price: '10.00', durationDays: 30 });
+    expect(row).toMatchObject({ status: 'active', endDate: saleEndDate(endDate, 30), price: '10.00', durationDays: 30 });
 
     const renewals = await renewalsOf(sale.id);
     expect(renewals).toHaveLength(1);
@@ -53,7 +54,7 @@ describe('Renovar venta', () => {
       id: renewalId,
       renewedAt: today(),
       previousEndDate: endDate,
-      newEndDate: addDays(endDate, 30),
+      newEndDate: saleEndDate(endDate, 30),
       durationDays: 30,
       price: '10.00',
       renewedBy: ctx.user.id,
@@ -97,8 +98,8 @@ describe('Renovar venta', () => {
     await expectRedirect(renew(ctx, yesterday.id), `/${ctx.company.id}/sales/${yesterday.id}`);
     await expectRedirect(renew(ctx, boundary.id), `/${ctx.company.id}/sales/${boundary.id}`);
 
-    expect(await reloadSale(yesterday.id)).toMatchObject({ status: 'active', endDate: daysFromToday(29) });
-    expect(await reloadSale(boundary.id)).toMatchObject({ status: 'active', endDate: daysFromToday(27) });
+    expect(await reloadSale(yesterday.id)).toMatchObject({ status: 'active', endDate: saleEndDate(daysFromToday(-1), 30) });
+    expect(await reloadSale(boundary.id)).toMatchObject({ status: 'active', endDate: saleEndDate(daysFromToday(-3), 30) });
   });
 
   it('an expired sale outside the grace period cannot be renewed', async () => {

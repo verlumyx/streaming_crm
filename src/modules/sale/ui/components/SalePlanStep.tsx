@@ -3,7 +3,7 @@
 import { Check, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { SALE_CAPACITY_LABELS } from '@/modules/sale/ui/sale-labels';
 import { useSaleFormContext } from '../contexts/SaleFormContext';
@@ -53,7 +53,7 @@ export function SalePlanStep() {
                 <span>· {SALE_CAPACITY_LABELS[plan.capacity]}</span>
                 <span>· {plan.durationDays} días</span>
               </div>
-              <span className="text-lg font-extrabold tabular-nums">{clp(plan.salePrice)}</span>
+              <span className="text-lg font-extrabold tabular-nums">{money(plan.salePrice)}</span>
             </button>
           );
         })}

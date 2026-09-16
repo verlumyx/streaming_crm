@@ -10,11 +10,11 @@ import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormSectionHead } from '@/components/form-section-head';
-import { clp } from '@/lib/format';
+import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { PLAN_CAPACITIES, type PlanCapacity } from '@/modules/plan/models/plan.model';
+import { PLAN_CAPACITIES, PLAN_DURATIONS, type PlanCapacity } from '@/modules/plan/models/plan.model';
 import { usePlanFormContext } from '../contexts/PlanFormContext';
-import { PLAN_CAPACITY_LABELS } from '../plan-labels';
+import { PLAN_CAPACITY_LABELS, planDurationLabel } from '../plan-labels';
 
 function FieldError({ messages }: { messages?: string[] }) {
   if (!messages?.length) return null;
@@ -109,16 +109,26 @@ export function PlanForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="duration-days" className="text-[13px] font-semibold">
-                  Duración (días) *
+                  Duración *
                 </Label>
-                <NumberInput
-                  id="duration-days"
-                  min={1}
-                  value={data.durationDays}
-                  onValueChange={(value) => setData('durationDays', value)}
-                  className={cn('h-[42px] rounded-[10px]', errors.durationDays && 'border-bad')}
-                  required
-                />
+                <Select
+                  value={String(data.durationDays)}
+                  onValueChange={(value) => setData('durationDays', Number(value))}
+                >
+                  <SelectTrigger
+                    id="duration-days"
+                    className={cn('h-[42px] w-full rounded-[10px]', errors.durationDays && 'border-bad')}
+                  >
+                    <SelectValue placeholder="Selecciona una duración" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLAN_DURATIONS.map((days) => (
+                      <SelectItem key={days} value={String(days)}>
+                        {planDurationLabel(days)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FieldError messages={errors.durationDays} />
               </div>
 
@@ -163,11 +173,11 @@ export function PlanForm() {
         <div className="flex flex-col gap-2.5">
           <SummaryRow label="Plan">{data.name || (mode === 'create' ? 'Nuevo' : '—')}</SummaryRow>
           <SummaryRow label="Capacidad">{PLAN_CAPACITY_LABELS[data.capacity]}</SummaryRow>
-          <SummaryRow label="Duración">{data.durationDays} días</SummaryRow>
+          <SummaryRow label="Duración">{planDurationLabel(data.durationDays)}</SummaryRow>
           <SummaryRow label="Meta ROI">{data.roiTargetPct}%</SummaryRow>
           <div className="border-input flex items-center justify-between border-t border-dashed pt-2.5 text-[15px]">
             <span className="text-muted-foreground font-medium">Precio de venta</span>
-            <b className="font-bold tabular-nums">{clp(data.salePrice)}</b>
+            <b className="font-bold tabular-nums">{money(data.salePrice)}</b>
           </div>
         </div>
         <Button

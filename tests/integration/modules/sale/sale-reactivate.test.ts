@@ -5,6 +5,7 @@ import { initialActionState } from '@/modules/shared/actions/action-state';
 import { uuidv7 } from '@/modules/shared/uuid';
 import { profiles } from '@/modules/account/models/account.model';
 import { sales } from '@/modules/sale/models/sale.model';
+import { saleEndDate } from '@/modules/sale/domain/sale-rules';
 import { reactivateSaleAction } from '@/app/[companyId]/sales/actions';
 import { resetDb } from '../../../helpers/reset-db';
 import { expectRedirect, setSessionUser } from '../../../helpers/session-mock';
@@ -51,7 +52,7 @@ describe('Reactivar venta', () => {
       status: 'active',
       cancelledAt: null,
       cancellationReason: null,
-      endDate: daysFromToday(30),
+      endDate: saleEndDate(today(), 30),
       durationDays: 30,
       price: '10.00',
     });
@@ -63,7 +64,7 @@ describe('Reactivar venta', () => {
     expect(renewals[0]).toMatchObject({
       renewedAt: today(),
       previousEndDate: oldEnd,
-      newEndDate: daysFromToday(30),
+      newEndDate: saleEndDate(today(), 30),
       renewedBy: ctx.user.id,
     });
 
@@ -76,7 +77,7 @@ describe('Reactivar venta', () => {
       date: today(),
       description: `Reactivación de venta ${sale.code}`,
       periodFrom: today(),
-      periodTo: daysFromToday(30),
+      periodTo: saleEndDate(today(), 30),
     });
   });
 
@@ -146,7 +147,7 @@ describe('Reactivar venta', () => {
 
     await expectRedirect(reactivate(ctx, sale.id), `/${ctx.company.id}/sales/${sale.id}`);
 
-    expect(await reloadSale(sale.id)).toMatchObject({ status: 'active', endDate: daysFromToday(30) });
+    expect(await reloadSale(sale.id)).toMatchObject({ status: 'active', endDate: saleEndDate(today(), 30) });
     expect(await profileStatus(ctx.profiles[0].id)).toBe('occupied');
   });
 

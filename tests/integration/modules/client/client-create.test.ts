@@ -13,7 +13,7 @@ import { createClient } from '../../../factories/client.factory';
 import { formData } from '../../../helpers/form-data';
 
 async function create(companyId: string, values: Record<string, string>) {
-  return createClientAction(companyId, initialActionState, formData({ id: uuidv7(), ...values }));
+  return createClientAction(companyId, initialActionState, formData({ id: uuidv7(), phone: '+58 4121234567', ...values }));
 }
 
 describe('Crear cliente', () => {
@@ -89,12 +89,27 @@ describe('Crear cliente', () => {
     const id = uuidv7();
 
     await expectRedirect(
-      createClientAction(company.id, initialActionState, formData({ id, name: 'Solo nombre', phone: '', email: '', notes: '' })),
+      createClientAction(
+        company.id,
+        initialActionState,
+        formData({ id, name: 'Solo nombre', phone: '+58 4121234567', email: '', notes: '' }),
+      ),
       `/${company.id}/clients`,
     );
 
     const [row] = await db.select().from(clients).where(eq(clients.id, id));
-    expect(row).toMatchObject({ phone: null, email: null, notes: null });
+    expect(row).toMatchObject({ phone: '+58 4121234567', email: null, notes: null });
+  });
+
+  it('the phone is required', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    setSessionUser(user);
+
+    const result = await create(company.id, { name: 'Sin teléfono', phone: '' });
+
+    expect(result.status).toBe('error');
+    expect(result.fieldErrors?.phone?.[0]).toBe('El teléfono es obligatorio.');
+    expect(await db.select().from(clients)).toHaveLength(0);
   });
 
   it('the name is required', async () => {

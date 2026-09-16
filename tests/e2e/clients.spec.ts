@@ -39,6 +39,7 @@ test('a duplicated email shows the field error', async ({ page }) => {
   for (const attempt of [1, 2]) {
     await page.goto(`/${companyId}/clients/create`);
     await page.locator('#name').fill(unique('Duplicado'));
+    await page.locator('#phone-number').fill('4121234567');
     await page.locator('#email').fill(email);
     await page.getByRole('button', { name: 'Crear cliente' }).click();
     if (attempt === 1) await expect(page).toHaveURL(new RegExp(`/${companyId}/clients$`));

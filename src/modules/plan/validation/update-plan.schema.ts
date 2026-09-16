@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PLAN_CAPACITIES } from '../models/plan.model';
+import { PLAN_CAPACITIES, PLAN_DURATIONS } from '../models/plan.model';
 import { requiredText, requiredUuid } from '@/modules/shared/validation/fields';
 
 /** `''` / whitespace from a form → `undefined`, so a blank number reports "obligatorio". */
@@ -19,9 +19,11 @@ export const updatePlanSchema = z.object({
   capacity: z.enum(PLAN_CAPACITIES, { message: 'La capacidad no es válida.' }),
   durationDays: z.preprocess(
     blankToUndefined,
-    requiredNumber('La duración')
-      .pipe(z.number().int('La duración debe ser un número entero de días.'))
-      .pipe(z.number().min(1, 'La duración debe ser al menos 1 día.')),
+    requiredNumber('La duración').pipe(
+      z
+        .number()
+        .refine((days) => (PLAN_DURATIONS as readonly number[]).includes(days), 'La duración debe ser 1, 3, 7, 15 o 30 días.'),
+    ),
   ),
   salePrice: z.preprocess(
     blankToUndefined,

@@ -19,7 +19,8 @@ const STEPS = [
 
 /** Wizard shell: step indicator, current step, navigation and the hidden fields posted to `createSaleAction`. */
 export function SaleWizard() {
-  const { data, step, setStep, canContinue, formAction, pending, state, notifyConflict } = useSaleFormContext();
+  const { data, step, setStep, canContinue, saleCount, formAction, pending, state, notifyConflict } =
+    useSaleFormContext();
 
   useEffect(() => {
     if (state.status === 'conflict') notifyConflict();
@@ -102,7 +103,7 @@ export function SaleWizard() {
         ) : (
           <Button type="submit" className="rounded-[11px] font-semibold" disabled={!canContinue || pending}>
             <Check />
-            {pending ? 'Registrando…' : 'Registrar venta'}
+            {pending ? 'Registrando…' : saleCount > 1 ? `Registrar ${saleCount} ventas` : 'Registrar venta'}
           </Button>
         )}
       </div>

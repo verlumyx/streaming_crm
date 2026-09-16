@@ -69,6 +69,20 @@ describe('Crear venta', () => {
     });
   });
 
+  it('a 30-day sale made on the 31st ends on the last day of a shorter next month', async () => {
+    const ctx = await context();
+    const october = values(ctx, { startDate: '2026-10-31' });
+    const january = values(ctx, { startDate: '2027-01-31', profileIds: [ctx.profiles[1].id] });
+
+    await expectRedirect(submit(ctx, october), `/${ctx.company.id}/sales/${october.id}`);
+    await expectRedirect(submit(ctx, january), `/${ctx.company.id}/sales/${january.id}`);
+
+    const [octoberRow] = await db.select().from(sales).where(eq(sales.id, october.id));
+    const [januaryRow] = await db.select().from(sales).where(eq(sales.id, january.id));
+    expect(octoberRow.endDate).toBe('2026-11-30');
+    expect(januaryRow.endDate).toBe('2027-02-28');
+  });
+
   it('the snapshot is immutable when the plan changes afterwards', async () => {
     const ctx = await context();
     const sale = values(ctx);
@@ -158,13 +172,52 @@ describe('Crear venta', () => {
     );
   });
 
-  it('a profile capacity plan rejects more than one profile', async () => {
+  it('a profile capacity plan with several profiles registers one sale per profile', async () => {
     const ctx = await context();
+    const sale = values(ctx, { startDate: '2026-09-10', profileIds: [ctx.profiles[0].id, ctx.profiles[1].id] });
+
+    await expectRedirect(submit(ctx, sale), `/${ctx.company.id}/sales?clientId=${ctx.client.id}`);
+
+    const rows = await db.select().from(sales).orderBy(sales.code);
+    expect(rows.map((r) => r.code)).toEqual(['SAL000001', 'SAL000002']);
+    expect(rows[0].id).toBe(sale.id);
+    for (const row of rows) {
+      expect(row).toMatchObject({ clientId: ctx.client.id, capacity: 'profile', price: '10.00', endDate: '2026-10-10' });
+      expect(await saleProfileIds(row.id)).toHaveLength(1);
+      expect(await ledgerOf(row.id)).toHaveLength(1);
+    }
+    expect((await Promise.all(rows.map((r) => saleProfileIds(r.id)))).flat().sort()).toEqual(
+      [ctx.profiles[0].id, ctx.profiles[1].id].sort(),
+    );
+    expect(await profileStatus(ctx.profiles[0].id)).toBe('occupied');
+    expect(await profileStatus(ctx.profiles[1].id)).toBe('occupied');
+    expect(await profileStatus(ctx.profiles[2].id)).toBe('available');
+  });
+
+  it('a multi-profile sale is all or nothing when one profile is unavailable', async () => {
+    const ctx = await context();
+    await db.update(profiles).set({ status: 'occupied' }).where(eq(profiles.id, ctx.profiles[1].id));
 
     const result = await submit(ctx, values(ctx, { profileIds: [ctx.profiles[0].id, ctx.profiles[1].id] }));
 
-    expect(result.status).toBe('error');
-    expect(result.fieldErrors?.profileIds?.[0]).toBe('Un plan de capacidad "perfil" requiere exactamente 1 perfil.');
+    expect(result.status).toBe('conflict');
+    expect((result.details?.unavailableProfiles as { id: string }[]).map((p) => p.id)).toEqual([ctx.profiles[1].id]);
+    expect(await db.select().from(sales)).toHaveLength(0);
+    expect(await db.select().from(transactions)).toHaveLength(0);
+    expect(await profileStatus(ctx.profiles[0].id)).toBe('available');
+  });
+
+  it('a multi-profile sale rejects a profile from another service without creating any sale', async () => {
+    const ctx = await context();
+    const otherService = await createService(db, { companyId: ctx.company.id, maxProfiles: 2 });
+    const other = await createAccountWithProfiles(db, { companyId: ctx.company.id, serviceId: otherService.id }, 2);
+
+    const result = await submit(ctx, values(ctx, { profileIds: [ctx.profiles[0].id, other.profiles[0].id] }));
+
+    expect(result.fieldErrors?.profileIds?.[0]).toBe(
+      'Todos los perfiles deben pertenecer a cuentas del servicio del plan seleccionado.',
+    );
+    expect(await db.select().from(sales)).toHaveLength(0);
     expect(await profileStatus(ctx.profiles[0].id)).toBe('available');
   });
 

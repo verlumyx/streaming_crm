@@ -51,7 +51,7 @@ export function ClientForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="phone-number" className="text-[13px] font-semibold">
-                  Teléfono / WhatsApp
+                  Teléfono / WhatsApp *
                 </Label>
                 <div className="flex gap-2">
                   <select
@@ -74,6 +74,7 @@ export function ClientForm() {
                     placeholder="412 1234567"
                     className={cn('h-[42px] min-w-0 flex-1 rounded-[10px]', errors.phone && 'border-bad')}
                     maxLength={20}
+                    required
                   />
                 </div>
                 <FieldError messages={errors.phone} />

@@ -5,7 +5,7 @@ import { MiniStat } from '@/components/mini-stat';
 import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { clp, formatDate } from '@/lib/format';
+import { money, formatDate } from '@/lib/format';
 import { accountRoutes } from '@/modules/account/routes';
 import type { AccountDto, AccountRenewalDto, ProfileDto } from '@/modules/account/serializers/account.serializer';
 import {
@@ -64,7 +64,7 @@ export function AccountShow({ companyId, account, profiles, renewals, canUpdate,
       </Card>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <MiniStat label="Costo" value={clp(account.cost)} icon={DollarSign} />
+        <MiniStat label="Costo" value={money(account.cost)} icon={DollarSign} />
         <MiniStat label="Fecha de compra" value={formatDate(account.purchaseDate)} icon={CalendarClock} />
         <MiniStat label="Próxima renovación" value={formatDate(account.nextRenewal)} icon={CalendarClock} />
         <MiniStat label="Perfiles libres" value={`${summary.available}/${summary.total}`} icon={Users} />

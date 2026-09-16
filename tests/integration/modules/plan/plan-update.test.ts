@@ -17,7 +17,7 @@ const values = (serviceId: string, overrides: Record<string, string | number> = 
     serviceId,
     name: 'Netflix Trimestral',
     capacity: 'full_account',
-    durationDays: 90,
+    durationDays: 15,
     salePrice: 30,
     roiTargetPct: 55,
     ...overrides,
@@ -43,7 +43,7 @@ describe('Actualizar plan', () => {
       serviceId: other.id,
       name: 'Netflix Trimestral',
       capacity: 'full_account',
-      durationDays: 90,
+      durationDays: 15,
       salePrice: '30.00',
       roiTargetPct: '55.00',
       code: plan.code,
@@ -94,7 +94,7 @@ describe('Actualizar plan', () => {
     );
     expect(invalid.fieldErrors).toMatchObject({
       name: ['El nombre es obligatorio.'],
-      durationDays: ['La duración debe ser al menos 1 día.'],
+      durationDays: ['La duración debe ser 1, 3, 7, 15 o 30 días.'],
       salePrice: ['El precio de venta no puede ser negativo.'],
     });
 

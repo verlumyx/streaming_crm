@@ -6,7 +6,7 @@ export class CreateClientCommand {
     readonly companyId: string,
     readonly createdBy: string | null,
     readonly name: string,
-    readonly phone: string | null,
+    readonly phone: string,
     readonly email: string | null,
     readonly notes: string | null,
   ) {}

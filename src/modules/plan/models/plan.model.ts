@@ -6,6 +6,9 @@ import { services } from '@/modules/service/models/service.model';
 export const PLAN_CODE_PREFIX = 'PLA';
 export const PLAN_CAPACITIES = ['profile', 'full_account'] as const;
 export type PlanCapacity = (typeof PLAN_CAPACITIES)[number];
+/** Durations a plan can have, in days. 30 renews on the same day of the next month (see `saleEndDate`). */
+export const PLAN_DURATIONS = [1, 3, 7, 15, 30] as const;
+export type PlanDuration = (typeof PLAN_DURATIONS)[number];
 
 export const plans = pgTable(
   'app_plans',

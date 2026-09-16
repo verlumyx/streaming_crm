@@ -2,17 +2,28 @@
 
 import { useMemo } from 'react';
 import { AlertTriangle, Check, KeyRound } from 'lucide-react';
+import { money } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { SaleAvailableProfileDto } from '@/modules/sale/serializers/sale.serializer';
 import { useSaleFormContext } from '../contexts/SaleFormContext';
 
 /**
- * Step 3: available profiles of the plan's service, grouped by account. `profile` plans take 1;
- * `full_account` plans take every profile of one account. After a conflict the taken profiles are listed.
+ * Step 3: available profiles of the plan's service, grouped by account. `profile` plans take one or more
+ * (one sale per profile); `full_account` plans take every profile of one account. After a conflict the
+ * taken profiles are listed.
  */
 export function SaleProfilesStep() {
-  const { data, selectedPlan, requiredCount, serviceProfiles, toggleProfile, unavailable, errors } =
-    useSaleFormContext();
+  const {
+    data,
+    selectedPlan,
+    requiredCount,
+    sellsOneSalePerProfile,
+    saleCount,
+    serviceProfiles,
+    toggleProfile,
+    unavailable,
+    errors,
+  } = useSaleFormContext();
 
   const accounts = useMemo(() => {
     const byAccount = new Map<string, { email: string; profiles: SaleAvailableProfileDto[] }>();
@@ -30,15 +41,26 @@ export function SaleProfilesStep() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">
-          Selecciona {requiredCount} perfil{requiredCount !== 1 ? 'es' : ''}
-          {selectedPlan.capacity === 'full_account' ? ' de una misma cuenta' : ''}.
-        </p>
-        <span className="text-muted-foreground text-[12.5px] font-semibold tabular-nums">
-          {data.profileIds.length}/{requiredCount}
-        </span>
-      </div>
+      {sellsOneSalePerProfile ? (
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Selecciona uno o más perfiles.</p>
+            <p className="text-muted-foreground text-[12.5px]">Se registrará una venta por cada perfil.</p>
+          </div>
+          <span className="text-muted-foreground text-right text-[12.5px] font-semibold tabular-nums">
+            {saleCount} venta{saleCount !== 1 ? 's' : ''} · {money(saleCount * selectedPlan.salePrice)}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium">
+            Selecciona {requiredCount} perfil{requiredCount !== 1 ? 'es' : ''} de una misma cuenta.
+          </p>
+          <span className="text-muted-foreground text-[12.5px] font-semibold tabular-nums">
+            {data.profileIds.length}/{requiredCount}
+          </span>
+        </div>
+      )}
 
       {unavailable.length > 0 && (
         <div className="border-bad/40 bg-bad-soft text-bad flex items-start gap-2 rounded-[10px] border p-3 text-sm">

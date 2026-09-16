@@ -3,7 +3,7 @@ import { BackLink } from '@/components/back-link';
 import { MiniStat } from '@/components/mini-stat';
 import { StatusPill } from '@/components/status-pill';
 import { Card } from '@/components/ui/card';
-import { clp, formatDate } from '@/lib/format';
+import { money, formatDate } from '@/lib/format';
 import { saleRoutes } from '@/modules/sale/routes';
 import {
   SALE_CAPACITY_LABELS,
@@ -75,7 +75,7 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
       )}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <MiniStat label="Precio" value={clp(sale.price)} icon={DollarSign} sub={`${sale.durationDays} días`} />
+        <MiniStat label="Precio" value={money(sale.price)} icon={DollarSign} sub={`${sale.durationDays} días`} />
         <MiniStat label="Inicio" value={formatDate(sale.startDate)} icon={CalendarClock} />
         <MiniStat label="Vencimiento" value={formatDate(sale.endDate)} icon={CalendarClock} />
         <MiniStat
@@ -137,7 +137,7 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
                   {formatDate(renewal.previousEndDate)} → {formatDate(renewal.newEndDate)} ({renewal.durationDays} días)
                 </span>
               </div>
-              <span className="font-bold tabular-nums">{clp(renewal.price)}</span>
+              <span className="font-bold tabular-nums">{money(renewal.price)}</span>
             </div>
           ))}
           {sale.renewals.length === 0 && (
@@ -165,7 +165,7 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
               </div>
               <span className={`font-bold tabular-nums ${transaction.type === 'income' ? 'text-ok' : 'text-bad'}`}>
                 {transaction.type === 'income' ? '+' : '−'}
-                {clp(transaction.amount)}
+                {money(transaction.amount)}
               </span>
             </div>
           ))}

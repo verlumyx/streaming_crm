@@ -8,6 +8,7 @@ test('the clients list paginates keeping the filters', async ({ page }) => {
   for (const suffix of ['A', 'B']) {
     await page.goto(`/${companyId}/clients/create`);
     await page.locator('#name').fill(`Paginado ${token} ${suffix}`);
+    await page.locator('#phone-number').fill('4121234567');
     await page.locator('#email').fill(`${token}${suffix.toLowerCase()}@e2e.test`);
     await page.getByRole('button', { name: 'Crear cliente' }).click();
     await expect(page).toHaveURL(new RegExp(`/${companyId}/clients$`));
@@ -38,6 +39,7 @@ test('the page size select changes how many records are shown', async ({ page })
   for (const suffix of ['A', 'B']) {
     await page.goto(`/${companyId}/clients/create`);
     await page.locator('#name').fill(`Tamano ${token} ${suffix}`);
+    await page.locator('#phone-number').fill('4121234567');
     await page.locator('#email').fill(`${token}${suffix.toLowerCase()}@e2e.test`);
     await page.getByRole('button', { name: 'Crear cliente' }).click();
     await expect(page).toHaveURL(new RegExp(`/${companyId}/clients$`));

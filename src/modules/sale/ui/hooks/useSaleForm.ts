@@ -73,6 +73,9 @@ export function useSaleForm(options: Options) {
 
   const selectedPlan = useMemo(() => plans.find((p) => p.id === data.planId) ?? null, [plans, data.planId]);
   const requiredCount = selectedPlan ? requiredProfileCount(selectedPlan.capacity, selectedPlan.maxProfiles) : 0;
+  /** A `profile` plan accepts several profiles: the server registers one sale per profile. */
+  const sellsOneSalePerProfile = selectedPlan?.capacity === 'profile';
+  const saleCount = sellsOneSalePerProfile ? data.profileIds.length : data.profileIds.length > 0 ? 1 : 0;
 
   const serviceProfiles = useMemo(() => {
     if (!selectedPlan) return [];
@@ -104,7 +107,9 @@ export function useSaleForm(options: Options) {
       ? data.clientId !== ''
       : step === 2
         ? data.planId !== '' && data.startDate !== ''
-        : requiredCount > 0 && data.profileIds.length === requiredCount;
+        : sellsOneSalePerProfile
+          ? data.profileIds.length > 0
+          : requiredCount > 0 && data.profileIds.length === requiredCount;
 
   const notifyConflict = () => {
     toast.error(state.message ?? 'Algunos perfiles ya no están disponibles.');
@@ -124,6 +129,8 @@ export function useSaleForm(options: Options) {
     selectedPlan,
     selectPlan,
     requiredCount,
+    sellsOneSalePerProfile,
+    saleCount,
     serviceProfiles,
     toggleProfile,
     unavailable,
