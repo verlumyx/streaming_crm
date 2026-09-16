@@ -3,9 +3,11 @@ import type { SaleCapacity, SaleStatus } from '@/modules/sale/models/sale.model'
 import type { ProfileStatus } from '@/modules/account/models/account.model';
 
 export const SALE_STATUS_LABELS: Record<SaleStatus, string> = {
+  pending: 'Por aprobar',
   active: 'Activa',
   expired: 'Expirada',
   cancelled: 'Expulsada',
+  rejected: 'Rechazada',
 };
 
 export const SALE_CAPACITY_LABELS: Record<SaleCapacity, string> = {
@@ -14,6 +16,7 @@ export const SALE_CAPACITY_LABELS: Record<SaleCapacity, string> = {
 };
 
 export function saleStatusPill(status: SaleStatus): StatusKind {
+  if (status === 'pending') return 'pendiente';
   if (status === 'active') return 'activo';
   if (status === 'expired') return 'vencido';
   return 'inactivo';

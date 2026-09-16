@@ -17,10 +17,13 @@ import { createSaleSchema } from '@/modules/sale/validation/create-sale.schema';
 import { renewSaleSchema } from '@/modules/sale/validation/renew-sale.schema';
 import { reactivateSaleSchema } from '@/modules/sale/validation/reactivate-sale.schema';
 import { cancelSaleSchema } from '@/modules/sale/validation/cancel-sale.schema';
+import { rejectSaleSchema } from '@/modules/sale/validation/reject-sale.schema';
 import { CreateSaleCommand } from '@/modules/sale/commands/create-sale.command';
 import { RenewSaleCommand } from '@/modules/sale/commands/renew-sale.command';
 import { ReactivateSaleCommand } from '@/modules/sale/commands/reactivate-sale.command';
 import { CancelSaleCommand } from '@/modules/sale/commands/cancel-sale.command';
+import { ApproveSaleCommand } from '@/modules/sale/commands/approve-sale.command';
+import { RejectSaleCommand } from '@/modules/sale/commands/reject-sale.command';
 import { toSaleClientOptionDto, type SaleClientOptionDto } from '@/modules/sale/serializers/sale.serializer';
 
 export type SaleClientSearchResult = ActionState & { clients: SaleClientOptionDto[] };
@@ -72,12 +75,63 @@ export async function createSaleAction(companyId: string, _prev: ActionState, fo
   for (const saleId of saleIds) revalidateSale(companyId, saleId);
 
   if (saleIds.length === 1) {
-    await setFlash('success', 'Venta registrada correctamente.');
+    await setFlash('success', 'Venta registrada. Queda por aprobar hasta verificar el pago.');
     redirect(saleRoutes.show(companyId, saleIds[0]));
   }
 
-  await setFlash('success', `${saleIds.length} ventas registradas correctamente.`);
+  await setFlash('success', `${saleIds.length} ventas registradas. Quedan por aprobar hasta verificar el pago.`);
   redirect(saleRoutes.index(companyId, { clientId }));
+}
+
+/**
+ * Aprobar (payment verified) → redirects to the sale (or to a same-company `returnTo`). Profiles taken meanwhile
+ * return `status: 'conflict'` with `details.unavailableProfiles`.
+ */
+export async function approveSaleAction(companyId: string, id: string, returnTo?: string): Promise<ActionState> {
+  try {
+    await requirePermission(companyId, SALE_PERMISSIONS.APPROVE);
+    if (!isUuid(id)) return NOT_FOUND;
+
+    const user = await getSessionUser();
+    await db.transaction(async (tx) => {
+      await createSaleContainer(tx).approveService.execute(new ApproveSaleCommand(id, companyId, user?.id ?? null));
+    });
+  } catch (error) {
+    return toActionError(error);
+  }
+
+  revalidateSale(companyId, id);
+  await setFlash('success', 'Venta aprobada correctamente.');
+  redirect(safeReturnTo(companyId, returnTo ?? null, saleRoutes.show(companyId, id)));
+}
+
+/** Rechazar (payment not verified) → redirects to the sale (or to a same-company `returnTo`). */
+export async function rejectSaleAction(
+  companyId: string,
+  id: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await requirePermission(companyId, SALE_PERMISSIONS.APPROVE);
+    if (!isUuid(id)) return NOT_FOUND;
+
+    const parsed = rejectSaleSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) return toFieldErrors(z.flattenError(parsed.error).fieldErrors);
+
+    const user = await getSessionUser();
+    await db.transaction(async (tx) => {
+      await createSaleContainer(tx).rejectService.execute(
+        RejectSaleCommand.fromInput(parsed.data, id, companyId, user?.id ?? null),
+      );
+    });
+  } catch (error) {
+    return toActionError(error);
+  }
+
+  revalidateSale(companyId, id);
+  await setFlash('success', 'Venta rechazada.');
+  redirect(safeReturnTo(companyId, formData.get('returnTo'), saleRoutes.show(companyId, id)));
 }
 
 /** Renovar → redirects to the sale (or to a same-company `returnTo`). */

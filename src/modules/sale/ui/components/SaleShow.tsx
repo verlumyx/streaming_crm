@@ -22,10 +22,12 @@ type Props = {
   canRenew: boolean;
   canReactivate: boolean;
   canCancel: boolean;
+  canApprove: boolean;
 };
 
 /** Ver: hero, contextual actions, metrics, occupied profiles, renewals and ledger entries. Server component. */
-export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canReactivate, canCancel }: Props) {
+export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canReactivate, canCancel, canApprove }: Props) {
+  const occupiesProfiles = sale.status !== 'pending' && sale.status !== 'rejected';
   const remaining =
     sale.daysUntilExpiration >= 0
       ? `${sale.daysUntilExpiration} días`
@@ -64,8 +66,16 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
           canRenew={canRenew}
           canReactivate={canReactivate}
           canCancel={canCancel}
+          canApprove={canApprove}
         />
       </Card>
+
+      {sale.status === 'pending' && (
+        <Card className="border-warn/40 bg-warn-soft text-warn rounded-2xl p-4 text-sm">
+          Esta venta está por aprobar. Al verificar el pago y aprobarla se ocuparán los perfiles y se registrará el
+          ingreso.
+        </Card>
+      )}
 
       {sale.canBeReactivated && sale.status === 'expired' && (
         <Card className="border-bad/40 bg-bad-soft text-bad rounded-2xl p-4 text-sm">
@@ -82,7 +92,7 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
           label="Restante"
           value={remaining}
           icon={Timer}
-          accent={sale.daysUntilExpiration < 0 && sale.status !== 'cancelled' ? 'bad' : 'default'}
+          accent={sale.daysUntilExpiration < 0 && sale.canBeCancelled ? 'bad' : 'default'}
         />
       </div>
 
@@ -90,7 +100,7 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-5">
           <div className="inline-flex items-center gap-2 text-base font-bold tracking-tight">
             <Layers className="text-muted-foreground size-4" />
-            Perfiles ocupados
+            {occupiesProfiles ? 'Perfiles ocupados' : 'Perfiles asignados'}
           </div>
           <span className="text-muted-foreground text-[12.5px] font-semibold">
             {sale.saleProfiles.length} perfil{sale.saleProfiles.length !== 1 ? 'es' : ''}
@@ -170,7 +180,11 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
             </div>
           ))}
           {sale.transactions.length === 0 && (
-            <div className="text-muted-foreground p-8 text-center text-sm">Sin movimientos registrados.</div>
+            <div className="text-muted-foreground p-8 text-center text-sm">
+              {sale.status === 'pending'
+                ? 'Sin movimientos. El ingreso se registra al aprobar la venta.'
+                : 'Sin movimientos registrados.'}
+            </div>
           )}
         </div>
       </Card>
@@ -182,6 +196,13 @@ export function SaleShow({ companyId, sale, replacementProfiles, canRenew, canRe
             Notas
           </div>
           <p className="text-muted-foreground text-[13.5px] whitespace-pre-line">{sale.notes}</p>
+        </Card>
+      )}
+
+      {sale.status === 'rejected' && sale.rejectionReason && (
+        <Card className="gap-2 rounded-2xl p-5">
+          <div className="text-base font-bold tracking-tight">Motivo de rechazo</div>
+          <p className="text-muted-foreground text-[13.5px]">{sale.rejectionReason}</p>
         </Card>
       )}
 

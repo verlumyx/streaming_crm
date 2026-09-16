@@ -15,6 +15,16 @@ export function isInGracePeriod(sale: SaleRuleSubject, today: string, graceDays:
   return sale.status === 'expired' && addDays(sale.endDate, graceDays) >= today;
 }
 
+/** Por aprobar: the payment has not been verified yet (no profiles occupied, no ledger entry). */
+export function canBeApproved(sale: Pick<SaleRuleSubject, 'status'>): boolean {
+  return sale.status === 'pending';
+}
+
+/** Expulsar applies only to approved sales still in their cycle. */
+export function canBeCancelled(sale: Pick<SaleRuleSubject, 'status'>): boolean {
+  return sale.status === 'active' || sale.status === 'expired';
+}
+
 /** Renewable when active, or expired within the grace period. */
 export function canBeRenewed(sale: SaleRuleSubject, today: string, graceDays: number): boolean {
   return sale.status === 'active' || isInGracePeriod(sale, today, graceDays);
@@ -58,7 +68,7 @@ export type LockedProfile = {
   accountServiceId: string;
   /** The profile is linked to the sale being processed (reactivation). */
   linkedToSale: boolean;
-  /** Another active/expired sale links this profile (it is really held by someone else). */
+  /** Another approved, non-cancelled sale linked this profile after this one (it is really held by someone else). */
   heldByAnotherSale: boolean;
 };
 

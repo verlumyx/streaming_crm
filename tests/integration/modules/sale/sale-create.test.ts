@@ -44,7 +44,7 @@ async function context(maxProfiles = 4): Promise<SaleContext> {
 describe('Crear venta', () => {
   beforeEach(resetDb);
 
-  it('a sale is created with the plan snapshot, the computed end date and the first code', async () => {
+  it('a sale is created pending approval with the plan snapshot, the computed end date and the first code', async () => {
     const ctx = await context();
     const sale = values(ctx, { startDate: '2026-09-10', notes: 'Pago por transferencia' });
 
@@ -63,8 +63,10 @@ describe('Crear venta', () => {
       price: '10.00',
       startDate: '2026-09-10',
       endDate: '2026-10-10',
-      status: 'active',
+      status: 'pending',
       notes: 'Pago por transferencia',
+      approvedAt: null,
+      approvedBy: null,
       cancelledAt: null,
     });
   });
@@ -94,38 +96,24 @@ describe('Crear venta', () => {
     expect(row).toMatchObject({ price: '10.00', durationDays: 30, capacity: 'profile', endDate: addDays(sale.startDate, 30) });
   });
 
-  it('creating a sale occupies the assigned profile through a pivot row', async () => {
+  it('creating a sale links the profile through a pivot row but does not occupy it until approved', async () => {
     const ctx = await context();
     const sale = values(ctx);
 
     await expectRedirect(submit(ctx, sale), `/${ctx.company.id}/sales/${sale.id}`);
 
-    expect(await profileStatus(ctx.profiles[0].id)).toBe('occupied');
+    expect(await profileStatus(ctx.profiles[0].id)).toBe('available');
     expect(await profileStatus(ctx.profiles[1].id)).toBe('available');
     expect(await saleProfileIds(sale.id)).toEqual([ctx.profiles[0].id]);
   });
 
-  it('creating a sale records an income transaction related to the sale', async () => {
+  it('creating a sale records no ledger entry until the payment is approved', async () => {
     const ctx = await context();
     const sale = values(ctx, { startDate: '2026-09-01' });
 
     await expectRedirect(submit(ctx, sale), `/${ctx.company.id}/sales/${sale.id}`);
 
-    const ledger = await ledgerOf(sale.id);
-    expect(ledger).toHaveLength(1);
-    expect(ledger[0]).toMatchObject({
-      companyId: ctx.company.id,
-      type: 'income',
-      category: 'sale',
-      amount: '10.00',
-      date: '2026-09-01',
-      description: `Venta ${ctx.service.name} a ${ctx.client.name}`,
-      relatedType: 'Sale',
-      relatedId: sale.id,
-      periodFrom: '2026-09-01',
-      periodTo: '2026-10-01',
-      recordedBy: ctx.user.id,
-    });
+    expect(await ledgerOf(sale.id)).toHaveLength(0);
   });
 
   it('a full_account sale requires exactly max_profiles profiles from the same account', async () => {
@@ -147,7 +135,7 @@ describe('Crear venta', () => {
       .select()
       .from(profiles)
       .where(inArray(profiles.id, ctx.profiles.map((p) => p.id)));
-    expect(occupied.every((p) => p.status === 'occupied')).toBe(true);
+    expect(occupied.every((p) => p.status === 'available')).toBe(true);
   });
 
   it('a full_account sale rejects a wrong number of profiles', async () => {
@@ -182,16 +170,21 @@ describe('Crear venta', () => {
     expect(rows.map((r) => r.code)).toEqual(['SAL000001', 'SAL000002']);
     expect(rows[0].id).toBe(sale.id);
     for (const row of rows) {
-      expect(row).toMatchObject({ clientId: ctx.client.id, capacity: 'profile', price: '10.00', endDate: '2026-10-10' });
+      expect(row).toMatchObject({
+        clientId: ctx.client.id,
+        capacity: 'profile',
+        price: '10.00',
+        endDate: '2026-10-10',
+        status: 'pending',
+      });
       expect(await saleProfileIds(row.id)).toHaveLength(1);
-      expect(await ledgerOf(row.id)).toHaveLength(1);
+      expect(await ledgerOf(row.id)).toHaveLength(0);
     }
     expect((await Promise.all(rows.map((r) => saleProfileIds(r.id)))).flat().sort()).toEqual(
       [ctx.profiles[0].id, ctx.profiles[1].id].sort(),
     );
-    expect(await profileStatus(ctx.profiles[0].id)).toBe('occupied');
-    expect(await profileStatus(ctx.profiles[1].id)).toBe('occupied');
-    expect(await profileStatus(ctx.profiles[2].id)).toBe('available');
+    expect(await profileStatus(ctx.profiles[0].id)).toBe('available');
+    expect(await profileStatus(ctx.profiles[1].id)).toBe('available');
   });
 
   it('a multi-profile sale is all or nothing when one profile is unavailable', async () => {
@@ -293,7 +286,7 @@ describe('Crear venta', () => {
     expect(await profileStatus(ctx.profiles[2].id)).toBe('available');
   });
 
-  it('concurrent creates on the same profile: exactly one succeeds', async () => {
+  it('a pending sale does not reserve its profile: other sales can still be registered on it', async () => {
     const ctx = await context();
 
     const results = await Promise.allSettled([submit(ctx, values(ctx)), submit(ctx, values(ctx)), submit(ctx, values(ctx))]);
@@ -301,12 +294,11 @@ describe('Crear venta', () => {
     const redirected = results.filter(
       (r) => r.status === 'rejected' && String((r.reason as Error).message).startsWith('NEXT_REDIRECT:'),
     );
-    const conflicts = results.filter((r) => r.status === 'fulfilled' && r.value.status === 'conflict');
-    expect(redirected).toHaveLength(1);
-    expect(conflicts).toHaveLength(2);
-    expect(await db.select().from(sales)).toHaveLength(1);
-    expect(await db.select().from(saleProfiles)).toHaveLength(1);
-    expect(await db.select().from(transactions)).toHaveLength(1);
+    expect(redirected).toHaveLength(3);
+    expect((await db.select().from(sales)).every((s) => s.status === 'pending')).toBe(true);
+    expect(await db.select().from(saleProfiles)).toHaveLength(3);
+    expect(await db.select().from(transactions)).toHaveLength(0);
+    expect(await profileStatus(ctx.profiles[0].id)).toBe('available');
   });
 
   it('concurrent creates on different profiles never duplicate a code', async () => {

@@ -7,9 +7,11 @@ import SalesPage from '@/app/[companyId]/sales/page';
 import SaleCreatePage from '@/app/[companyId]/sales/create/page';
 import SaleShowPage from '@/app/[companyId]/sales/[id]/page';
 import {
+  approveSaleAction,
   cancelSaleAction,
   createSaleAction,
   reactivateSaleAction,
+  rejectSaleAction,
   renewSaleAction,
   searchSaleClientsAction,
 } from '@/app/[companyId]/sales/actions';
@@ -69,6 +71,16 @@ const ENTRIES: Record<string, Entry> = {
     permission: SALE_PERMISSIONS.REACTIVATE,
     kind: 'action',
     run: (ctx, saleId) => reactivateSaleAction(ctx.company.id, saleId, initialActionState, form({ id: uuidv7() })),
+  },
+  'Aprobar (action)': {
+    permission: SALE_PERMISSIONS.APPROVE,
+    kind: 'action',
+    run: (ctx, saleId) => approveSaleAction(ctx.company.id, saleId),
+  },
+  'Rechazar (action)': {
+    permission: SALE_PERMISSIONS.APPROVE,
+    kind: 'action',
+    run: (ctx, saleId) => rejectSaleAction(ctx.company.id, saleId, initialActionState, form({ rejectionReason: 'x' })),
   },
   'Expulsar (action)': {
     permission: SALE_PERMISSIONS.CANCEL,

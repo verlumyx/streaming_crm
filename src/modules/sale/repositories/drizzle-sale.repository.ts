@@ -48,7 +48,7 @@ export class DrizzleSaleRepository implements SaleRepository {
       price: data.price.toFixed(2),
       startDate: data.startDate,
       endDate: data.endDate,
-      status: 'active',
+      status: 'pending',
       notes: data.notes,
     });
   }
@@ -197,7 +197,7 @@ export class DrizzleSaleRepository implements SaleRepository {
   }
 
   /**
-   * Another non-cancelled sale linked the profile AFTER `saleId` did: that sale holds it now
+   * Another approved, non-cancelled sale linked the profile AFTER `saleId` did (pending / rejected sales never hold one): that sale holds it now
    * (e.g. it was freed by the expiration job and sold again). Correlated on `app_profiles.id`.
    */
   private heldByAnotherSale(saleId: string): SQL<boolean> {
@@ -206,7 +206,7 @@ export class DrizzleSaleRepository implements SaleRepository {
       inner join ${sales} as other_sale on other_sale.id = other_sp.sale_id
       where other_sp.profile_id = ${profiles.id}
         and other_sp.sale_id <> ${saleId}
-        and other_sale.status <> 'cancelled'
+        and other_sale.status not in ('cancelled', 'pending', 'rejected')
         and other_sale.deleted_at is null
         and other_sp.created_at > coalesce(
           (select mine_sp.created_at from ${saleProfiles} as mine_sp where mine_sp.sale_id = ${saleId} and mine_sp.profile_id = ${profiles.id}),
@@ -250,6 +250,28 @@ export class DrizzleSaleRepository implements SaleRepository {
     if (profileIds.length === 0) return;
     await this.db.insert(saleProfiles).values(profileIds.map((profileId) => ({ id: uuidv7(), saleId, profileId })));
     await this.db.update(profiles).set({ status: 'occupied' }).where(inArray(profiles.id, [...profileIds]));
+  }
+
+  async linkProfiles(saleId: string, profileIds: readonly string[]): Promise<void> {
+    if (profileIds.length === 0) return;
+    await this.db.insert(saleProfiles).values(profileIds.map((profileId) => ({ id: uuidv7(), saleId, profileId })));
+  }
+
+  async approve(sale: SaleRow, approvedBy: string | null): Promise<void> {
+    const now = new Date();
+    await this.db.update(sales).set({ status: 'active', approvedAt: now, approvedBy }).where(eq(sales.id, sale.id));
+    await this.db.update(saleProfiles).set({ createdAt: now }).where(eq(saleProfiles.saleId, sale.id));
+    await this.db
+      .update(profiles)
+      .set({ status: 'occupied' })
+      .where(inArray(profiles.id, this.db.select({ id: saleProfiles.profileId }).from(saleProfiles).where(eq(saleProfiles.saleId, sale.id))));
+  }
+
+  async reject(sale: SaleRow, rejectedBy: string | null, reason: string): Promise<void> {
+    await this.db
+      .update(sales)
+      .set({ status: 'rejected', rejectedAt: new Date(), rejectedBy, rejectionReason: reason.slice(0, 255) })
+      .where(eq(sales.id, sale.id));
   }
 
   async replaceProfiles(saleId: string, profileIds: readonly string[], releaseIds: readonly string[]): Promise<void> {

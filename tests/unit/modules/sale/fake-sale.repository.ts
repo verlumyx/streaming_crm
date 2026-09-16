@@ -36,7 +36,12 @@ export class FakeSaleRepository implements SaleRepository {
       ...data,
       code: formatSequentialCode('SAL', sequence),
       price: data.price.toFixed(2),
-      status: 'active',
+      status: 'pending',
+      approvedAt: null,
+      approvedBy: null,
+      rejectedAt: null,
+      rejectedBy: null,
+      rejectionReason: null,
       cancelledAt: null,
       cancellationReason: null,
       createdAt: new Date(),
@@ -59,6 +64,11 @@ export class FakeSaleRepository implements SaleRepository {
       startDate,
       endDate: addDays(startDate, 30),
       status: 'active',
+      approvedAt: null,
+      approvedBy: null,
+      rejectedAt: null,
+      rejectedBy: null,
+      rejectionReason: null,
       cancelledAt: null,
       cancellationReason: null,
       notes: null,
@@ -113,7 +123,7 @@ export class FakeSaleRepository implements SaleRepository {
         l.profileId === profileId &&
         l.saleId !== saleId &&
         l.seq > mine &&
-        this.sales.find((s) => s.id === l.saleId)?.status !== 'cancelled',
+        !['cancelled', 'pending', 'rejected'].includes(this.sales.find((s) => s.id === l.saleId)?.status ?? ''),
     );
   }
 
@@ -136,6 +146,22 @@ export class FakeSaleRepository implements SaleRepository {
       this.links.push({ saleId, profileId, seq: ++this.seq });
       this.profile(profileId).status = 'occupied';
     }
+  }
+
+  async linkProfiles(saleId: string, profileIds: readonly string[]) {
+    for (const profileId of profileIds) this.links.push({ saleId, profileId, seq: ++this.seq });
+  }
+
+  async approve(sale: SaleRow, approvedBy: string | null) {
+    Object.assign(sale, { status: 'active', approvedAt: new Date(), approvedBy });
+    for (const link of this.links.filter((l) => l.saleId === sale.id)) {
+      link.seq = ++this.seq;
+      this.profile(link.profileId).status = 'occupied';
+    }
+  }
+
+  async reject(sale: SaleRow, rejectedBy: string | null, reason: string) {
+    Object.assign(sale, { status: 'rejected', rejectedAt: new Date(), rejectedBy, rejectionReason: reason });
   }
 
   async replaceProfiles(saleId: string, profileIds: readonly string[], releaseIds: readonly string[]) {

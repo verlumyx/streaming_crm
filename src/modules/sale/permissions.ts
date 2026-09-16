@@ -12,6 +12,7 @@ export const SALE_MODULE = {
     { id: 'sales.renew', label: 'Renovar ventas', order: 4 },
     { id: 'sales.reactivate', label: 'Reactivar ventas', order: 5 },
     { id: 'sales.cancel', label: 'Expulsar ventas', order: 6 },
+    { id: 'sales.approve', label: 'Aprobar y rechazar ventas', order: 7 },
   ],
 } as const satisfies ModuleDefinition;
 
@@ -22,4 +23,5 @@ export const SALE_PERMISSIONS = {
   RENEW: 'sales.renew',
   REACTIVATE: 'sales.reactivate',
   CANCEL: 'sales.cancel',
+  APPROVE: 'sales.approve',
 } as const;

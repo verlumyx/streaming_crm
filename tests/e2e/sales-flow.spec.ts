@@ -66,10 +66,21 @@ test('sell a profile with the wizard, renew, expel with a refund and reactivate'
   await page.getByRole('button', { name: 'Registrar venta' }).click();
 
   await expect(page).toHaveURL(new RegExp(`/${companyId}/sales/[0-9a-f-]{36}$`), { timeout: 30_000 });
-  await expect(page.getByText('Venta registrada correctamente.')).toBeVisible();
+  await expect(page.getByText('Venta registrada. Queda por aprobar hasta verificar el pago.')).toBeVisible();
   await expect(page.getByText(clientName).first()).toBeVisible();
-  await expect(page.getByText('Activa').first()).toBeVisible();
+  await expect(page.getByText('Por aprobar', { exact: true }).first()).toBeVisible();
   await expect(page.getByText(accountEmail).first()).toBeVisible();
+  await expect(page.getByText('Sin movimientos. El ingreso se registra al aprobar la venta.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Renovar' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Expulsar' })).toHaveCount(0);
+
+  // --- Approve (payment verified): the profile is occupied and the income recorded ---
+  await page.getByRole('button', { name: 'Aprobar' }).click();
+  await expect(page.getByText('Venta aprobada correctamente.')).toBeVisible();
+  await expect(page.getByText('Activa').first()).toBeVisible();
+  await expect(page.getByText('Ocupado', { exact: true })).toBeVisible();
+  await expect(page.getByText(new RegExp(`^Venta .+ a ${clientName}$`))).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Aprobar' })).toHaveCount(0);
 
   // --- Renew ---
   await page.getByRole('button', { name: 'Renovar' }).first().click();
@@ -120,5 +131,22 @@ test('sell a profile with the wizard, renew, expel with a refund and reactivate'
   await page.getByRole('button', { name: 'Registrar 2 ventas' }).click();
 
   await expect(page).toHaveURL(new RegExp(`/${companyId}/sales\\?clientId=`), { timeout: 30_000 });
-  await expect(page.getByText('2 ventas registradas correctamente.')).toBeVisible();
+  await expect(page.getByText('2 ventas registradas. Quedan por aprobar hasta verificar el pago.')).toBeVisible();
+
+  // --- From the list (newest first: both pending sales, then the approved one): reject one, approve the other ---
+  await expect(page.getByText('Por aprobar', { exact: true })).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Opciones' }).first().click();
+  await page.getByRole('menuitem', { name: 'Rechazar' }).click();
+  dialog = page.getByRole('dialog');
+  await dialog.locator('#reject-reason').fill('El pago no se reflejó (e2e)');
+  await dialog.locator('button[type="submit"]').click();
+  await expect(page.getByText('Venta rechazada.')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/${companyId}/sales\\?clientId=`));
+  await expect(page.getByText('Rechazada', { exact: true })).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Opciones' }).nth(1).click();
+  await page.getByRole('menuitem', { name: 'Aprobar' }).click();
+  await expect(page.getByText('Venta aprobada correctamente.')).toBeVisible();
+  await expect(page.getByText('Por aprobar', { exact: true })).toHaveCount(0);
 });

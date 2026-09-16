@@ -70,6 +70,20 @@ describe('Reporte por servicio / plan', () => {
     expect(props.meta.total).toBe(2);
   });
 
+  it('only approved sales count unless a status is filtered explicitly', async () => {
+    const ctx = await makeSaleContext(db);
+    await sale(ctx, { price: '100.00' });
+    await sale(ctx, { status: 'pending', price: '40.00' });
+    await sale(ctx, { status: 'rejected', price: '20.00' });
+    setSessionUser(ctx.user);
+
+    const all = await render(ctx.company.id, { searched: '1' });
+    const pending = await render(ctx.company.id, { searched: '1', status: 'pending' });
+
+    expect(all.props.summary).toMatchObject({ totalSales: 1, totalRevenue: 100 });
+    expect(pending.props.summary).toMatchObject({ totalSales: 1, totalRevenue: 40 });
+  });
+
   it('groups sales by plan with plan reference data', async () => {
     const ctx = await makeSaleContext(db);
     const planA = await createPlan(db, { companyId: ctx.company.id, serviceId: ctx.service.id, name: 'Plan A', salePrice: '80.00', roiTargetPct: '40.00' });

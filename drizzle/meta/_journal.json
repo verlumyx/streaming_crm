@@ -22,6 +22,20 @@
       "when": 1789421141235,
       "tag": "0002_api_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789581611332,
+      "tag": "0003_sale_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789581617288,
+      "tag": "0004_sale_approval_backfill",
+      "breakpoints": true
     }
   ]
 }

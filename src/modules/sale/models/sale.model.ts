@@ -20,7 +20,8 @@ import { services } from '@/modules/service/models/service.model';
 import { profiles } from '@/modules/account/models/account.model';
 
 export const SALE_CODE_PREFIX = 'SAL';
-export const SALE_STATUSES = ['active', 'expired', 'cancelled'] as const;
+/** `pending` (por aprobar) → `active` once the payment is verified, or `rejected`. Only approved sales occupy profiles. */
+export const SALE_STATUSES = ['pending', 'active', 'expired', 'cancelled', 'rejected'] as const;
 export type SaleStatus = (typeof SALE_STATUSES)[number];
 export const SALE_CAPACITIES = ['profile', 'full_account'] as const;
 export type SaleCapacity = (typeof SALE_CAPACITIES)[number];
@@ -53,7 +54,12 @@ export const sales = pgTable(
     price: numeric('price', { precision: 10, scale: 2 }).notNull(),
     startDate: date('start_date').notNull(),
     endDate: date('end_date').notNull(),
-    status: varchar('status', { length: 20 }).notNull().default('active').$type<SaleStatus>(),
+    status: varchar('status', { length: 20 }).notNull().default('pending').$type<SaleStatus>(),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    approvedBy: uuid('approved_by').references(() => user.id, { onDelete: 'set null' }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+    rejectedBy: uuid('rejected_by').references(() => user.id, { onDelete: 'set null' }),
+    rejectionReason: varchar('rejection_reason', { length: 255 }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     cancellationReason: varchar('cancellation_reason', { length: 255 }),
     notes: text('notes'),
@@ -70,7 +76,7 @@ export const sales = pgTable(
     check('app_sales_capacity_check', sql`${t.capacity} in ('profile', 'full_account')`),
     check('app_sales_duration_days_check', sql`${t.durationDays} >= 1`),
     check('app_sales_price_check', sql`${t.price} >= 0`),
-    check('app_sales_status_check', sql`${t.status} in ('active', 'expired', 'cancelled')`),
+    check('app_sales_status_check', sql`${t.status} in ('pending', 'active', 'expired', 'cancelled', 'rejected')`),
   ],
 );
 

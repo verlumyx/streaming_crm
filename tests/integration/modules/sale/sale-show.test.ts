@@ -7,7 +7,7 @@ import { plans } from '@/modules/plan/models/plan.model';
 import { clients } from '@/modules/client/models/client.model';
 import SaleShowPage from '@/app/[companyId]/sales/[id]/page';
 import SaleCreatePage from '@/app/[companyId]/sales/create/page';
-import { createSaleAction, searchSaleClientsAction } from '@/app/[companyId]/sales/actions';
+import { approveSaleAction, createSaleAction, searchSaleClientsAction } from '@/app/[companyId]/sales/actions';
 import { resetDb } from '../../../helpers/reset-db';
 import { expectNotFound, expectRedirect, setSessionUser } from '../../../helpers/session-mock';
 import { assignRoleWithPermissions, createUserWithCompany } from '../../../helpers/company-context';
@@ -39,6 +39,21 @@ describe('Ver venta', () => {
       `/${ctx.company.id}/sales/${id}`,
     );
 
+    const pending = await SaleShowPage(showParams(ctx.company.id, id));
+
+    expect(pending.props).toMatchObject({ canApprove: true });
+    expect(pending.props.sale).toMatchObject({
+      status: 'pending',
+      canBeApproved: true,
+      canBeCancelled: false,
+      canBeRenewed: false,
+      canBeReactivated: false,
+      approvedAt: null,
+      saleProfiles: [{ profileId: ctx.profiles[1].id, profileStatus: 'available' }],
+      transactions: [],
+    });
+
+    await expectRedirect(approveSaleAction(ctx.company.id, id), `/${ctx.company.id}/sales/${id}`);
     const element = await SaleShowPage(showParams(ctx.company.id, id));
 
     expect(element.props).toMatchObject({ canRenew: true, canReactivate: true, canCancel: true, replacementProfiles: [] });
@@ -46,6 +61,8 @@ describe('Ver venta', () => {
       id,
       code: 'SAL000001',
       status: 'active',
+      canBeApproved: false,
+      canBeCancelled: true,
       notes: 'Nota',
       canBeRenewed: true,
       canBeReactivated: false,

@@ -31,10 +31,11 @@ export default async function SaleShowPage({ params }: Props) {
     throw error;
   }
 
-  const [canRenew, canReactivate, canCancel] = await Promise.all([
+  const [canRenew, canReactivate, canCancel, canApprove] = await Promise.all([
     hasPermission(companyId, SALE_PERMISSIONS.RENEW),
     hasPermission(companyId, SALE_PERMISSIONS.REACTIVATE),
     hasPermission(companyId, SALE_PERMISSIONS.CANCEL),
+    hasPermission(companyId, SALE_PERMISSIONS.APPROVE),
   ]);
 
   return (
@@ -45,6 +46,7 @@ export default async function SaleShowPage({ params }: Props) {
       canRenew={canRenew}
       canReactivate={canReactivate}
       canCancel={canCancel}
+      canApprove={canApprove}
     />
   );
 }

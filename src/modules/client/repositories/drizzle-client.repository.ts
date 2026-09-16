@@ -126,7 +126,8 @@ export class DrizzleClientRepository implements ClientRepository {
       .select({
         monthlyIncome: sql<string>`coalesce(sum(${sales.price}) filter (where ${sales.status} = 'active'), 0)`,
         pendingDebt: sql<string>`coalesce(sum(${sales.price}) filter (where ${sales.status} = 'expired'), 0)`,
-        salesTotal: sql<string>`coalesce(sum(${sales.price}), 0)`,
+        // Pending / rejected sales were never paid.
+        salesTotal: sql<string>`coalesce(sum(${sales.price}) filter (where ${sales.status} not in ('pending', 'rejected')), 0)`,
       })
       .from(sales)
       .where(scope);
@@ -161,11 +162,11 @@ export class DrizzleClientRepository implements ClientRepository {
         and(
           eq(sales.companyId, companyId),
           eq(sales.clientId, clientId),
-          inArray(sales.status, ['active', 'expired'] satisfies SaleStatus[]),
+          inArray(sales.status, ['pending', 'active', 'expired'] satisfies SaleStatus[]),
           isNull(sales.deletedAt),
         ),
       )
-      .orderBy(sql`case ${sales.status} when 'active' then 0 else 1 end`, desc(sales.endDate));
+      .orderBy(sql`case ${sales.status} when 'active' then 0 when 'pending' then 1 else 2 end`, desc(sales.endDate));
 
     if (rows.length === 0) return [];
 

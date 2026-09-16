@@ -99,8 +99,18 @@ export interface SaleRepository {
   profileIdsOf(saleId: string): Promise<string[]>;
   /** Inserts the `app_sale_profiles` rows and marks the profiles `occupied`. */
   assignProfiles(saleId: string, profileIds: readonly string[]): Promise<void>;
+  /** Inserts the `app_sale_profiles` rows only (pending sale): the profiles stay as they are. */
+  linkProfiles(saleId: string, profileIds: readonly string[]): Promise<void>;
   /** Frees `releaseIds` (guarded), replaces the sale's pivot rows with `profileIds` and occupies them. */
   replaceProfiles(saleId: string, profileIds: readonly string[], releaseIds: readonly string[]): Promise<void>;
+
+  /**
+   * Pending → `active` (approvedAt/By) and occupies its linked profiles. The pivot rows are re-stamped to now:
+   * the occupation starts at approval, which is what `heldByAnotherSale` orders by.
+   */
+  approve(sale: SaleRow, approvedBy: string | null): Promise<void>;
+  /** Pending → `rejected` (rejectedAt/By + reason). Profiles are untouched (a pending sale never occupied them). */
+  reject(sale: SaleRow, rejectedBy: string | null, reason: string): Promise<void>;
 
   /** Inserts the renewal, moves `endDate` and sets the sale `active`. */
   renew(sale: SaleRow, renewal: SaleRenewalData): Promise<void>;

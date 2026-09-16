@@ -4,6 +4,8 @@ import { createTransactionContainer } from '@/modules/transaction/container';
 import { DrizzleSaleRepository } from './repositories/drizzle-sale.repository';
 import { DrizzlePendingRefundWriter } from './repositories/drizzle-pending-refund.writer';
 import { SaleCreateService } from './services/sale-create.service';
+import { SaleApproveService } from './services/sale-approve.service';
+import { SaleRejectService } from './services/sale-reject.service';
 import { SaleRenewService } from './services/sale-renew.service';
 import { SaleReactivateService } from './services/sale-reactivate.service';
 import { SaleCancelService } from './services/sale-cancel.service';
@@ -25,7 +27,9 @@ export function createSaleContainer(db: DbExecutor, options: { graceDays?: numbe
   return {
     repository,
     graceDays,
-    createService: new SaleCreateService(repository, transactionRepository),
+    createService: new SaleCreateService(repository),
+    approveService: new SaleApproveService(repository, transactionRepository),
+    rejectService: new SaleRejectService(repository),
     renewService: new SaleRenewService(repository, transactionRepository, graceDays),
     reactivateService: new SaleReactivateService(repository, transactionRepository, graceDays),
     cancelService: new SaleCancelService(repository, refundWriter),

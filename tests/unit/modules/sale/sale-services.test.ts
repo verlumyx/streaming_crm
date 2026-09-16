@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SaleCreateService } from '@/modules/sale/services/sale-create.service';
+import { SaleApproveService } from '@/modules/sale/services/sale-approve.service';
+import { SaleRejectService } from '@/modules/sale/services/sale-reject.service';
 import { SaleRenewService } from '@/modules/sale/services/sale-renew.service';
 import { SaleReactivateService } from '@/modules/sale/services/sale-reactivate.service';
 import { SaleCancelService } from '@/modules/sale/services/sale-cancel.service';
@@ -8,6 +10,8 @@ import { CreateSaleCommand } from '@/modules/sale/commands/create-sale.command';
 import { RenewSaleCommand } from '@/modules/sale/commands/renew-sale.command';
 import { ReactivateSaleCommand } from '@/modules/sale/commands/reactivate-sale.command';
 import { CancelSaleCommand } from '@/modules/sale/commands/cancel-sale.command';
+import { ApproveSaleCommand } from '@/modules/sale/commands/approve-sale.command';
+import { RejectSaleCommand } from '@/modules/sale/commands/reject-sale.command';
 import { SaleClientInactiveException } from '@/modules/sale/exceptions/sale-client-inactive.exception';
 import { SalePlanNotFoundException } from '@/modules/sale/exceptions/sale-plan-not-found.exception';
 import { SaleInvalidProfilesException } from '@/modules/sale/exceptions/sale-invalid-profiles.exception';
@@ -16,6 +20,8 @@ import { SaleCannotBeRenewedException } from '@/modules/sale/exceptions/sale-can
 import { SaleCannotBeReactivatedException } from '@/modules/sale/exceptions/sale-cannot-be-reactivated.exception';
 import { SaleAlreadyCancelledException } from '@/modules/sale/exceptions/sale-already-cancelled.exception';
 import { SaleNotFoundException } from '@/modules/sale/exceptions/sale-not-found.exception';
+import { SaleNotPendingException } from '@/modules/sale/exceptions/sale-not-pending.exception';
+import { SaleCannotBeCancelledException } from '@/modules/sale/exceptions/sale-cannot-be-cancelled.exception';
 import { FakePendingRefundWriter, FakeSaleRepository, FakeTransactionRepository } from './fake-sale.repository';
 
 const COMPANY = 'company-1';
@@ -60,17 +66,15 @@ const createCommand = (overrides: Partial<CreateSaleCommand> = {}) =>
 
 describe('SaleCreateService', () => {
   let repository: FakeSaleRepository;
-  let ledger: FakeTransactionRepository;
   let service: SaleCreateService;
 
   beforeEach(() => {
     repository = new FakeSaleRepository();
-    ledger = new FakeTransactionRepository();
     seed(repository);
-    service = new SaleCreateService(repository, ledger);
+    service = new SaleCreateService(repository);
   });
 
-  it('snapshots the plan, computes the end date, occupies the profile and records the sale income', async () => {
+  it('snapshots the plan, computes the end date and registers the sale pending approval', async () => {
     const [sale] = await service.execute(createCommand());
 
     expect(sale).toMatchObject({
@@ -80,30 +84,23 @@ describe('SaleCreateService', () => {
       durationDays: 30,
       price: '12.50',
       endDate: '2026-10-10',
-      status: 'active',
+      status: 'pending',
       agentId: 'agent-1',
+      approvedAt: null,
     });
-    expect(repository.profile('profile-1').status).toBe('occupied');
-    expect(ledger.created).toHaveLength(1);
-    expect(ledger.created[0]).toMatchObject({
-      category: 'sale',
-      amount: 12.5,
-      date: '2026-09-10',
-      description: 'Venta Netflix a Camila',
-      options: { relatedType: 'Sale', relatedId: 'sale-new', periodFrom: '2026-09-10', periodTo: '2026-10-10', recordedBy: 'agent-1' },
-    });
+    expect(await repository.profileIdsOf('sale-new')).toEqual(['profile-1']);
+    expect(repository.profile('profile-1').status).toBe('available');
   });
 
-  it('a profile plan with several profiles registers one sale per profile', async () => {
+  it('a profile plan with several profiles registers one pending sale per profile', async () => {
     const created = await service.execute(createCommand({ profileIds: ['profile-1', 'profile-2'] }));
 
     expect(created.map((s) => s.code)).toEqual(['SAL000001', 'SAL000002']);
     expect(created[0].id).toBe('sale-new');
     expect(created[1].id).not.toBe('sale-new');
-    expect(created.every((s) => s.price === '12.50' && s.clientId === 'client-1')).toBe(true);
-    expect(repository.profile('profile-1').status).toBe('occupied');
-    expect(repository.profile('profile-2').status).toBe('occupied');
-    expect(ledger.created.map((t) => t.options?.relatedId)).toEqual(created.map((s) => s.id));
+    expect(created.every((s) => s.price === '12.50' && s.clientId === 'client-1' && s.status === 'pending')).toBe(true);
+    expect(repository.profile('profile-1').status).toBe('available');
+    expect(repository.profile('profile-2').status).toBe('available');
   });
 
   it('reports every unavailable profile of a multi-profile sale and writes nothing', async () => {
@@ -117,7 +114,7 @@ describe('SaleCreateService', () => {
     expect(error).toBeInstanceOf(SaleProfilesUnavailableException);
     expect(error.unavailableProfiles.map((p: { id: string }) => p.id)).toEqual(['profile-2', 'profile-3']);
     expect(repository.sales).toHaveLength(0);
-    expect(ledger.created).toHaveLength(0);
+    expect(repository.links).toHaveLength(0);
   });
 
   it('rejects the same profile repeated', async () => {
@@ -143,7 +140,92 @@ describe('SaleCreateService', () => {
     expect(error).toBeInstanceOf(SaleProfilesUnavailableException);
     expect(error.details).toEqual({ unavailableProfiles: [{ id: 'profile-1', label: 'cuenta@x.com · Perfil 1' }] });
     expect(repository.sales).toHaveLength(0);
+  });
+});
+
+describe('SaleApproveService', () => {
+  let repository: FakeSaleRepository;
+  let ledger: FakeTransactionRepository;
+  let service: SaleApproveService;
+
+  beforeEach(() => {
+    repository = new FakeSaleRepository();
+    ledger = new FakeTransactionRepository();
+    seed(repository);
+    service = new SaleApproveService(repository, ledger);
+  });
+
+  const pendingSale = (id = 'sale-1', profileIds = ['profile-1']) =>
+    repository.addSale({ id, companyId: COMPANY, status: 'pending', startDate: '2026-09-10', price: '12.50' }, profileIds);
+
+  it('activates the sale, occupies its profiles and records the income on the approval date', async () => {
+    pendingSale();
+
+    const sale = await service.execute(new ApproveSaleCommand('sale-1', COMPANY, 'seller-1'), TODAY);
+
+    expect(sale).toMatchObject({ status: 'active', approvedBy: 'seller-1', startDate: '2026-09-10', endDate: '2026-10-10' });
+    expect(sale.approvedAt).toBeInstanceOf(Date);
+    expect(repository.profile('profile-1').status).toBe('occupied');
+    expect(ledger.created).toHaveLength(1);
+    expect(ledger.created[0]).toMatchObject({
+      category: 'sale',
+      amount: 12.5,
+      date: TODAY,
+      description: 'Venta Netflix a Camila',
+      options: { relatedType: 'Sale', relatedId: 'sale-1', periodFrom: '2026-09-10', periodTo: '2026-10-10', recordedBy: 'seller-1' },
+    });
+  });
+
+  it('a profile taken by another sale meanwhile is a conflict and nothing changes', async () => {
+    pendingSale();
+    repository.profile('profile-1').status = 'occupied';
+
+    const error = await service.execute(new ApproveSaleCommand('sale-1', COMPANY, 'seller-1'), TODAY).catch((e) => e);
+
+    expect(error).toBeInstanceOf(SaleProfilesUnavailableException);
+    expect(error.unavailableProfiles).toEqual([{ id: 'profile-1', label: 'cuenta@x.com · Perfil 1' }]);
+    expect(repository.sales[0].status).toBe('pending');
     expect(ledger.created).toHaveLength(0);
+  });
+
+  it('only pending sales can be approved', async () => {
+    repository.addSale({ id: 'active', companyId: COMPANY });
+    repository.addSale({ id: 'rejected', companyId: COMPANY, status: 'rejected' });
+
+    for (const id of ['active', 'rejected']) {
+      await expect(service.execute(new ApproveSaleCommand(id, COMPANY, null), TODAY)).rejects.toBeInstanceOf(
+        SaleNotPendingException,
+      );
+    }
+    await expect(service.execute(new ApproveSaleCommand('nope', COMPANY, null), TODAY)).rejects.toBeInstanceOf(
+      SaleNotFoundException,
+    );
+    expect(ledger.created).toHaveLength(0);
+  });
+});
+
+describe('SaleRejectService', () => {
+  it('rejects a pending sale with its reason, leaving profiles and ledger untouched', async () => {
+    const repository = new FakeSaleRepository();
+    seed(repository);
+    repository.addSale({ id: 'sale-1', companyId: COMPANY, status: 'pending' }, ['profile-1']);
+
+    const sale = await new SaleRejectService(repository).execute(
+      new RejectSaleCommand('sale-1', COMPANY, 'seller-1', 'Pago no recibido'),
+    );
+
+    expect(sale).toMatchObject({ status: 'rejected', rejectedBy: 'seller-1', rejectionReason: 'Pago no recibido' });
+    expect(repository.profile('profile-1').status).toBe('available');
+  });
+
+  it('only pending sales can be rejected', async () => {
+    const repository = new FakeSaleRepository();
+    repository.addSale({ id: 'sale-1', companyId: COMPANY });
+
+    await expect(
+      new SaleRejectService(repository).execute(new RejectSaleCommand('sale-1', COMPANY, null, 'x')),
+    ).rejects.toBeInstanceOf(SaleNotPendingException);
+    expect(repository.sales[0].status).toBe('active');
   });
 });
 
@@ -271,6 +353,21 @@ describe('SaleCancelService', () => {
     await expect(
       service.execute('sale-1', COMPANY, new CancelSaleCommand(null, 'x', false, null, null)),
     ).rejects.toBeInstanceOf(SaleAlreadyCancelledException);
+  });
+
+  it('pending and rejected sales cannot be expelled (nothing was paid nor occupied)', async () => {
+    const repository = new FakeSaleRepository();
+    const refunds = new FakePendingRefundWriter();
+    repository.addSale({ id: 'pending', companyId: COMPANY, status: 'pending' });
+    repository.addSale({ id: 'rejected', companyId: COMPANY, status: 'rejected' });
+    const service = new SaleCancelService(repository, refunds);
+
+    for (const id of ['pending', 'rejected']) {
+      await expect(
+        service.execute(id, COMPANY, new CancelSaleCommand(null, 'x', true, null, null)),
+      ).rejects.toBeInstanceOf(SaleCannotBeCancelledException);
+    }
+    expect(refunds.created).toHaveLength(0);
   });
 });
 

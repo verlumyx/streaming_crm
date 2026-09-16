@@ -1,4 +1,4 @@
-import { and, asc, count, countDistinct, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, desc, eq, isNull, notInArray, sql } from 'drizzle-orm';
 import type { DbExecutor } from '@/modules/shared/infrastructure/db-executor';
 import { sales } from '@/modules/sale/models/sale.model';
 import { services } from '@/modules/service/models/service.model';
@@ -20,7 +20,8 @@ export class DrizzleServicePlanReportRepository implements ServicePlanReportRepo
       sql`(${sales.createdAt})::date >= ${f.dateFrom}`,
       sql`(${sales.createdAt})::date <= ${f.dateTo}`,
       f.serviceId ? eq(sales.serviceId, f.serviceId) : undefined,
-      f.status ? eq(sales.status, f.status) : undefined,
+      // Without an explicit status only approved sales count: pending / rejected ones were never paid.
+      f.status ? eq(sales.status, f.status) : notInArray(sales.status, ['pending', 'rejected']),
       f.capacity ? eq(sales.capacity, f.capacity) : undefined,
     );
   }

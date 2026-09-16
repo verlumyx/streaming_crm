@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canBeApproved,
+  canBeCancelled,
   canBeReactivated,
   canBeRenewed,
   daysUntilExpiration,
@@ -26,6 +28,30 @@ const profile = (overrides: Partial<LockedProfile> = {}): LockedProfile => ({
   linkedToSale: false,
   heldByAnotherSale: false,
   ...overrides,
+});
+
+describe('sale rules: approval and expulsion', () => {
+  it('only a pending sale can be approved or rejected', () => {
+    expect(canBeApproved({ status: 'pending' })).toBe(true);
+    for (const status of ['active', 'expired', 'cancelled', 'rejected'] as const) {
+      expect(canBeApproved({ status })).toBe(false);
+    }
+  });
+
+  it('only approved sales still in their cycle can be expelled', () => {
+    expect(canBeCancelled({ status: 'active' })).toBe(true);
+    expect(canBeCancelled({ status: 'expired' })).toBe(true);
+    for (const status of ['pending', 'cancelled', 'rejected'] as const) {
+      expect(canBeCancelled({ status })).toBe(false);
+    }
+  });
+
+  it('pending and rejected sales are neither renewable nor reactivable', () => {
+    for (const status of ['pending', 'rejected'] as const) {
+      expect(canBeRenewed({ status, endDate: '2026-09-20' }, TODAY, GRACE)).toBe(false);
+      expect(canBeReactivated({ status, endDate: '2026-09-01' }, TODAY, GRACE)).toBe(false);
+    }
+  });
 });
 
 describe('sale rules: grace period, renew, reactivate', () => {

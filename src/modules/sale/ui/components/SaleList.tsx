@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Eye, MoreHorizontal, Plus, RefreshCw, RotateCcw, Search, ShoppingCart } from 'lucide-react';
+import { Ban, Check, Eye, MoreHorizontal, Plus, RefreshCw, RotateCcw, Search, ShoppingCart, X } from 'lucide-react';
 import { StatusPill } from '@/components/status-pill';
 import {
   ListFooter,
@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { money, formatDate } from '@/lib/format';
 import { usePermission } from '@/modules/shared/auth/company-context';
 import type { SaleStatus } from '@/modules/sale/models/sale.model';
@@ -39,7 +39,9 @@ import type {
   SaleServiceOptionDto,
 } from '@/modules/sale/serializers/sale.serializer';
 import type { SaleFilters, SaleMeta } from '../types/Sale';
+import { useSaleApprove } from '../hooks/useSaleApprove';
 import { SaleCancelDialog } from './SaleCancelDialog';
+import { SaleRejectDialog } from './SaleRejectDialog';
 import { SaleRenewDialog } from './SaleRenewDialog';
 
 const COLUMNS = 'lg:grid-cols-[0.9fr_2fr_1.2fr_1fr_1fr_0.9fr_0.7fr]';
@@ -63,6 +65,8 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
   const [filters, setFilters] = useState<SaleFilters>(initialFilters);
   const [renewSale, setRenewSale] = useState<SaleDto | null>(null);
   const [cancelSale, setCancelSale] = useState<SaleDto | null>(null);
+  const [rejectSale, setRejectSale] = useState<SaleDto | null>(null);
+  const { approve, approving } = useSaleApprove(companyId);
 
   const setFilter = (key: keyof SaleFilters, value: string | undefined) =>
     setFilters((prev) => ({ ...prev, [key]: value === ALL ? undefined : value }));
@@ -112,19 +116,14 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
           {selects.map(({ key, label, options }) => (
             <div key={key} className="space-y-2">
               <Label htmlFor={`filter-${key}`}>{label}</Label>
-              <Select value={(filters[key] as string | undefined) ?? ALL} onValueChange={(value) => setFilter(key, value)}>
-                <SelectTrigger id={`filter-${key}`} className="w-full">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>Todos</SelectItem>
-                  {options.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id={`filter-${key}`}
+                options={[{ value: ALL, label: 'Todos' }, ...options]}
+                value={(filters[key] as string | undefined) ?? ALL}
+                onChange={(value) => setFilter(key, value ?? ALL)}
+                placeholder="Todos"
+                emptyText="Sin resultados"
+              />
             </div>
           ))}
           <div className="space-y-2">
@@ -217,6 +216,21 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
                       <Eye className="mr-2 size-4" />
                       Ver
                     </DropdownMenuItem>
+                    {sale.canBeApproved && can(SALE_PERMISSIONS.APPROVE) && (
+                      <>
+                        <DropdownMenuItem
+                          disabled={approving}
+                          onSelect={() => approve(sale.id, saleRoutes.index(companyId, initialFilters))}
+                        >
+                          <Check className="mr-2 size-4" />
+                          Aprobar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setRejectSale(sale)}>
+                          <X className="mr-2 size-4" />
+                          Rechazar
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     {sale.canBeRenewed && can(SALE_PERMISSIONS.RENEW) && (
                       <DropdownMenuItem onSelect={() => setRenewSale(sale)}>
                         <RefreshCw className="mr-2 size-4" />
@@ -229,7 +243,7 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
                         Reactivar
                       </DropdownMenuItem>
                     )}
-                    {sale.status !== 'cancelled' && can(SALE_PERMISSIONS.CANCEL) && (
+                    {sale.canBeCancelled && can(SALE_PERMISSIONS.CANCEL) && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => setCancelSale(sale)}>
@@ -254,6 +268,12 @@ export function SaleList({ companyId, sales, meta, filters: initialFilters, clie
 
       <SaleRenewDialog companyId={companyId} sale={renewSale} onClose={() => setRenewSale(null)} />
       <SaleCancelDialog companyId={companyId} sale={cancelSale} onClose={() => setCancelSale(null)} />
+      <SaleRejectDialog
+        companyId={companyId}
+        sale={rejectSale}
+        onClose={() => setRejectSale(null)}
+        returnTo={saleRoutes.index(companyId, initialFilters)}
+      />
     </PageShell>
   );
 }

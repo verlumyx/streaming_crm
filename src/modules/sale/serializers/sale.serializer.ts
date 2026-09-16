@@ -3,6 +3,8 @@ import type { ProfileStatus } from '@/modules/account/models/account.model';
 import type { ClientStatus } from '@/modules/client/models/client.model';
 import type { TransactionCategory, TransactionRow, TransactionType } from '@/modules/transaction/models/transaction.model';
 import {
+  canBeApproved,
+  canBeCancelled,
   canBeReactivated,
   canBeRenewed,
   daysUntilExpiration,
@@ -35,6 +37,9 @@ export type SaleDto = {
   startDate: string;
   endDate: string;
   status: SaleStatus;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
   notes: string | null;
@@ -46,6 +51,9 @@ export type SaleDto = {
   service: { id: string; name: string; code: string } | null;
   agent: { id: string; name: string } | null;
   isInGracePeriod: boolean;
+  /** Por aprobar: the seller still has to verify the payment. */
+  canBeApproved: boolean;
+  canBeCancelled: boolean;
   canBeRenewed: boolean;
   canBeReactivated: boolean;
   daysUntilExpiration: number;
@@ -109,6 +117,9 @@ export function toSaleDto(item: SaleListItem, context: SaleRuleContext): SaleDto
     startDate: item.startDate,
     endDate: item.endDate,
     status: item.status,
+    approvedAt: item.approvedAt?.toISOString() ?? null,
+    rejectedAt: item.rejectedAt?.toISOString() ?? null,
+    rejectionReason: item.rejectionReason,
     cancelledAt: item.cancelledAt?.toISOString() ?? null,
     cancellationReason: item.cancellationReason,
     notes: item.notes,
@@ -127,6 +138,8 @@ export function toSaleDto(item: SaleListItem, context: SaleRuleContext): SaleDto
     service: item.service ? { id: item.service.id, name: item.service.name, code: item.service.code } : null,
     agent: item.agent ? { id: item.agent.id, name: item.agent.name } : null,
     isInGracePeriod: isInGracePeriod(item, context.today, context.graceDays),
+    canBeApproved: canBeApproved(item),
+    canBeCancelled: canBeCancelled(item),
     canBeRenewed: canBeRenewed(item, context.today, context.graceDays),
     canBeReactivated: canBeReactivated(item, context.today, context.graceDays),
     daysUntilExpiration: daysUntilExpiration(item, context.today),

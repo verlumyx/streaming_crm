@@ -1,6 +1,4 @@
 import { uuidv7 } from '@/modules/shared/uuid';
-import { CreateTransactionCommand } from '@/modules/transaction/commands/create-transaction.command';
-import type { TransactionRepository } from '@/modules/transaction/repositories/transaction.repository';
 import type { SaleRow } from '../models/sale.model';
 import type { SaleRepository } from '../repositories/sale.repository';
 import type { CreateSaleCommand } from '../commands/create-sale.command';
@@ -14,16 +12,14 @@ import { SaleProfilesUnavailableException } from '../exceptions/sale-profiles-un
 /**
  * Crear (runs inside the action's transaction): active client of the company, plan of the company,
  * profiles locked `FOR UPDATE` and checked for coherence + availability, plan snapshot,
- * `endDate = startDate + durationDays`, pivot rows + occupied profiles, and the `sale` ledger income.
+ * `endDate = startDate + durationDays` and the pivot rows. The sale starts `pending` (por aprobar): the
+ * profiles are NOT occupied and no ledger income is recorded until the seller approves it (`SaleApproveService`).
  *
  * A `profile` plan with N profiles registers N sales (one profile each, all or nothing): the first one
  * keeps `command.id`, the rest get a fresh UUID v7. A `full_account` plan always registers a single sale.
  */
 export class SaleCreateService {
-  constructor(
-    private readonly repository: SaleRepository,
-    private readonly transactionRepository: TransactionRepository,
-  ) {}
+  constructor(private readonly repository: SaleRepository) {}
 
   async execute(command: CreateSaleCommand): Promise<SaleRow[]> {
     const client = await this.repository.findClient(command.clientId, command.companyId);
@@ -82,25 +78,7 @@ export class SaleCreateService {
         endDate,
         notes: command.notes,
       });
-      await this.repository.assignProfiles(saleId, profileIds);
-
-      await this.transactionRepository.create(
-        new CreateTransactionCommand(
-          uuidv7(),
-          command.companyId,
-          'sale',
-          price,
-          command.startDate,
-          `Venta ${plan.serviceName} a ${client.name}`,
-          {
-            relatedType: 'Sale',
-            relatedId: saleId,
-            periodFrom: command.startDate,
-            periodTo: endDate,
-            recordedBy: command.agentId,
-          },
-        ),
-      );
+      await this.repository.linkProfiles(saleId, profileIds);
 
       created.push(await this.repository.findOrFail(saleId, command.companyId));
     }

@@ -26,7 +26,7 @@ type SaleOverrides = Partial<NewSaleRow> & {
   profileIds?: string[];
 };
 
-/** Persists a sale, its `app_sale_profiles` rows, and marks the profiles occupied (unless cancelled). */
+/** Persists a sale, its `app_sale_profiles` rows, and marks the profiles occupied (unless cancelled, pending or rejected). */
 export async function createSale(db: DbExecutor, { profileIds = [], ...input }: SaleOverrides): Promise<SaleRow> {
   sequence++;
   const overrides = defined(input) as Omit<SaleOverrides, 'profileIds'>;
@@ -50,7 +50,7 @@ export async function createSale(db: DbExecutor, { profileIds = [], ...input }: 
 
   if (profileIds.length > 0) {
     await db.insert(saleProfiles).values(profileIds.map((profileId) => ({ id: uuidv7(), saleId: sale.id, profileId })));
-    if (sale.status !== 'cancelled') {
+    if (!['cancelled', 'pending', 'rejected'].includes(sale.status)) {
       await db.update(profiles).set({ status: 'occupied' }).where(inArray(profiles.id, profileIds));
     }
   }

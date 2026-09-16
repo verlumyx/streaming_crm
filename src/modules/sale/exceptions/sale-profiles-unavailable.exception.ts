@@ -5,10 +5,11 @@ import type { UnavailableProfile } from '../domain/sale-rules';
 export class SaleProfilesUnavailableException extends ConflictError {
   readonly unavailableProfiles: UnavailableProfile[];
 
-  constructor(unavailableProfiles: UnavailableProfile[]) {
-    super('Algunos perfiles ya no están disponibles. Selecciona otros perfiles del mismo servicio.', {
-      unavailableProfiles,
-    });
+  constructor(
+    unavailableProfiles: UnavailableProfile[],
+    message = 'Algunos perfiles ya no están disponibles. Selecciona otros perfiles del mismo servicio.',
+  ) {
+    super(message, { unavailableProfiles });
     this.name = 'SaleProfilesUnavailableException';
     this.unavailableProfiles = unavailableProfiles;
   }

@@ -51,6 +51,8 @@ describe('Ver cliente', () => {
     const active = await persistSale(db, ctx, { status: 'active', price: '15.00', profileIndex: 0 });
     await persistSale(db, ctx, { status: 'expired', price: '8.00', profileIndex: 1 });
     await persistSale(db, ctx, { status: 'cancelled', price: '5.00', profileIndex: 2 });
+    await persistSale(db, ctx, { status: 'pending', price: '40.00', profileIndex: 3 });
+    await persistSale(db, ctx, { status: 'rejected', price: '60.00', profileIndex: 3 });
     await createSaleRenewal(db, active, { price: '12.00' });
     setSessionUser(ctx.user);
 
@@ -59,16 +61,18 @@ describe('Ver cliente', () => {
     expect(element.props.metrics).toEqual({ monthlyIncome: 15, pendingDebt: 8, totalPaid: 15 + 8 + 5 + 12 });
   });
 
-  it('the client show page excludes cancelled sales and lists active before expired', async () => {
+  it('the client show page excludes cancelled and rejected sales and lists active, pending, then expired', async () => {
     const ctx = await makeSaleContext(db);
     await persistSale(db, ctx, { status: 'expired', profileIndex: 0 });
     await persistSale(db, ctx, { status: 'cancelled', profileIndex: 1 });
+    await persistSale(db, ctx, { status: 'pending', profileIndex: 3 });
+    await persistSale(db, ctx, { status: 'rejected', profileIndex: 3 });
     await persistSale(db, ctx, { status: 'active', profileIndex: 2 });
     setSessionUser(ctx.user);
 
     const element = await ClientShowPage(params(ctx.company.id, ctx.client.id));
 
-    expect(element.props.sales.map((s: { status: string }) => s.status)).toEqual(['active', 'expired']);
+    expect(element.props.sales.map((s: { status: string }) => s.status)).toEqual(['active', 'pending', 'expired']);
   });
 
   it('the client edit page renders', async () => {

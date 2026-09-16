@@ -83,6 +83,8 @@ export async function createSaleFixture(companyId: string, opts: { clientName: s
         startDate: today,
         endDate: addDays(today, 30),
         status: 'active',
+        approvedAt: new Date(),
+        approvedBy: admin.id,
       });
 
       return { saleId, saleCode, clientName: opts.clientName, price: opts.price };
