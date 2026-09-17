@@ -124,6 +124,11 @@ export interface SaleRepository {
 
   /** Expiration job (every company). */
   findDueActiveSaleIds(today: string): Promise<string[]>;
+  /**
+   * Pending sales older than `minutes` whose agent is a bot user. They hold a profile reservation
+   * nobody is going to pay for, so the job rejects them and the inventory goes back on sale.
+   */
+  findStalePendingSaleIds(minutes: number, agentUserIds: readonly string[]): Promise<{ id: string; companyId: string }[]>;
   markExpired(saleId: string, today: string): Promise<boolean>;
   findExpiredSaleIdsEndingBefore(cutoff: string): Promise<string[]>;
   /** Frees the sale's occupied profiles (guarded like `cancel`). Returns how many were freed. */

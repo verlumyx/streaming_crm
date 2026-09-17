@@ -27,6 +27,7 @@ import type {
   SaleServiceRef,
 } from './sale.repository';
 import type { SearchSaleCommand } from '../commands/search-sale.command';
+import { salesConfig } from '@/config/sales';
 
 export class DrizzleSaleRepository implements SaleRepository {
   constructor(private readonly db: DbExecutor) {}
@@ -215,8 +216,36 @@ export class DrizzleSaleRepository implements SaleRepository {
     )`;
   }
 
+  /**
+   * A recent `pending` sale (other than `saleId`) already asked for this profile. Approving that
+   * sale will occupy it, so offering it again would oversell the inventory. The window keeps an
+   * abandoned pending sale from blocking stock forever.
+   */
+  private reservedByPendingSale(saleId?: string): SQL<boolean> {
+    return sql<boolean>`exists (
+      select 1 from ${saleProfiles} as pending_sp
+      inner join ${sales} as pending_sale on pending_sale.id = pending_sp.sale_id
+      where pending_sp.profile_id = ${profiles.id}
+        and pending_sale.status = 'pending'
+        and pending_sale.deleted_at is null
+        and pending_sale.created_at > now() - ${`${salesConfig.pendingReservationMinutes} minutes`}::interval
+        ${saleId ? sql`and pending_sp.sale_id <> ${saleId}` : sql``}
+    )`;
+  }
+
   async lockProfiles(profileIds: readonly string[], saleId?: string): Promise<LockedProfile[]> {
     if (profileIds.length === 0) return [];
+
+    // Two statements on purpose. The lock must be taken FIRST: under READ COMMITTED a subquery over
+    // `app_sales` inside the locking statement is evaluated against the snapshot taken before the
+    // lock was granted, so a competing pending sale committed while we waited would be invisible.
+    // Reading the flags in a second statement gives it a fresh snapshot that includes that sale.
+    await this.db
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(inArray(profiles.id, [...profileIds]))
+      .orderBy(asc(profiles.id))
+      .for('update');
 
     return this.db
       .select({
@@ -229,12 +258,12 @@ export class DrizzleSaleRepository implements SaleRepository {
         accountServiceId: accounts.serviceId,
         linkedToSale: saleId ? this.linkedToSale(saleId) : sql<boolean>`false`,
         heldByAnotherSale: saleId ? this.heldByAnotherSale(saleId) : sql<boolean>`false`,
+        reservedByPendingSale: this.reservedByPendingSale(saleId),
       })
       .from(profiles)
       .innerJoin(accounts, eq(accounts.id, profiles.accountId))
       .where(inArray(profiles.id, [...profileIds]))
-      .orderBy(asc(profiles.id))
-      .for('update', { of: profiles });
+      .orderBy(asc(profiles.id));
   }
 
   async profileIdsOf(saleId: string): Promise<string[]> {
@@ -364,6 +393,26 @@ export class DrizzleSaleRepository implements SaleRepository {
     return rows.map((r) => r.id);
   }
 
+  async findStalePendingSaleIds(
+    minutes: number,
+    agentUserIds: readonly string[],
+  ): Promise<{ id: string; companyId: string }[]> {
+    if (agentUserIds.length === 0) return [];
+
+    return this.db
+      .select({ id: sales.id, companyId: sales.companyId })
+      .from(sales)
+      .where(
+        and(
+          eq(sales.status, 'pending'),
+          inArray(sales.agentId, [...agentUserIds]),
+          isNull(sales.deletedAt),
+          sql`${sales.createdAt} < now() - ${`${minutes} minutes`}::interval`,
+        ),
+      )
+      .orderBy(asc(sales.createdAt));
+  }
+
   async markExpired(saleId: string, today: string): Promise<boolean> {
     const rows = await this.db
       .update(sales)
@@ -456,6 +505,8 @@ export class DrizzleSaleRepository implements SaleRepository {
         and(
           eq(accounts.companyId, companyId),
           eq(profiles.status, 'available'),
+          // Also hides profiles a recent pending sale already committed, for the wizard and the bot alike.
+          sql`not ${this.reservedByPendingSale()}`,
           serviceId ? eq(accounts.serviceId, serviceId) : undefined,
         ),
       )

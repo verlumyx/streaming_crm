@@ -27,8 +27,10 @@ export class SaleApproveService {
     if (!sale) throw new SaleNotFoundException();
     if (!canBeApproved(sale)) throw new SaleNotPendingException();
 
-    const locked = await this.repository.lockProfiles(await this.repository.profileIdsOf(sale.id));
-    const unavailable = unavailableProfiles(locked);
+    // Pass the sale id so its OWN pending reservation is not read as someone else holding the profile.
+    const locked = await this.repository.lockProfiles(await this.repository.profileIdsOf(sale.id), sale.id);
+    // Another pending sale on the same profile does not block approval: `occupied` decides the race.
+    const unavailable = unavailableProfiles(locked, { allowPendingReservation: true });
     if (unavailable.length > 0) {
       throw new SaleProfilesUnavailableException(
         unavailable,

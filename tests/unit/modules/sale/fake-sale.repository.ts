@@ -16,7 +16,7 @@ import type { TransactionRepository } from '@/modules/transaction/repositories/t
 import type { CreateTransactionCommand } from '@/modules/transaction/commands/create-transaction.command';
 import { SaleNotFoundException } from '@/modules/sale/exceptions/sale-not-found.exception';
 
-type FakeProfile = Omit<LockedProfile, 'linkedToSale' | 'heldByAnotherSale'>;
+type FakeProfile = Omit<LockedProfile, 'linkedToSale' | 'heldByAnotherSale' | 'reservedByPendingSale'>;
 type Link = { saleId: string; profileId: string; seq: number };
 
 /** In-memory `SaleRepository` for service unit tests. */
@@ -127,6 +127,14 @@ export class FakeSaleRepository implements SaleRepository {
     );
   }
 
+  /** Mirrors the SQL rule: a recent `pending` sale of someone else already committed the profile. */
+  private reservedByPendingSale(profileId: string, saleId?: string): boolean {
+    return this.links.some((l) => {
+      if (l.profileId !== profileId || l.saleId === saleId) return false;
+      return this.sales.find((s) => s.id === l.saleId)?.status === 'pending';
+    });
+  }
+
   async lockProfiles(profileIds: readonly string[], saleId?: string): Promise<LockedProfile[]> {
     return this.profiles
       .filter((p) => profileIds.includes(p.id))
@@ -134,6 +142,7 @@ export class FakeSaleRepository implements SaleRepository {
         ...p,
         linkedToSale: saleId ? this.links.some((l) => l.saleId === saleId && l.profileId === p.id) : false,
         heldByAnotherSale: saleId ? this.heldByAnotherSale(p.id, saleId) : false,
+        reservedByPendingSale: this.reservedByPendingSale(p.id, saleId),
       }));
   }
 
@@ -244,6 +253,12 @@ export class FakeSaleRepository implements SaleRepository {
   async listActivePlans() {
     return [];
   }
+  async findStalePendingSaleIds(minutes: number, agentUserIds: readonly string[]) {
+    return this.sales
+      .filter((s) => s.status === 'pending' && agentUserIds.includes(s.agentId))
+      .map((s) => ({ id: s.id, companyId: s.companyId }));
+  }
+
   async listAvailableProfiles() {
     return [];
   }

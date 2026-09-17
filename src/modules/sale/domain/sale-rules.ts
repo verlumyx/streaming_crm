@@ -70,6 +70,11 @@ export type LockedProfile = {
   linkedToSale: boolean;
   /** Another approved, non-cancelled sale linked this profile after this one (it is really held by someone else). */
   heldByAnotherSale: boolean;
+  /**
+   * A recent `pending` sale (not this one) already asked for this profile. Approving that one will
+   * occupy it, so selling it again would oversell the inventory.
+   */
+  reservedByPendingSale: boolean;
 };
 
 export type ProfileTarget = {
@@ -118,15 +123,23 @@ export function profileCoherenceError(
 export type UnavailableProfile = { id: string; label: string };
 
 /**
- * Profiles that cannot be assigned. `available` always passes; when `allowOwnOccupied` is set (reactivation),
- * a profile still occupied by THIS sale (linked to it and not held by another active/expired sale) passes too.
+ * Profiles that cannot be assigned.
+ *
+ * `available` passes, unless another recent `pending` sale already committed the profile — that is
+ * what stops two customers from paying for the same one. Approval passes `allowPendingReservation`
+ * because there the race is already decided by `occupied`: whoever approves first takes it and the
+ * other approval then legitimately conflicts.
+ *
+ * With `allowOwnOccupied` (reactivation), a profile still occupied by THIS sale — linked to it and
+ * not held by a newer active/expired sale — passes too.
  */
 export function unavailableProfiles(
   profiles: readonly LockedProfile[],
-  options: { allowOwnOccupied?: boolean } = {},
+  options: { allowOwnOccupied?: boolean; allowPendingReservation?: boolean } = {},
 ): UnavailableProfile[] {
   return profiles
     .filter((p) => {
+      if (p.reservedByPendingSale && !options.allowPendingReservation) return true;
       if (p.status === 'available') return false;
       const ownOccupied = p.status === 'occupied' && p.linkedToSale && !p.heldByAnotherSale;
       return !(options.allowOwnOccupied && ownOccupied);

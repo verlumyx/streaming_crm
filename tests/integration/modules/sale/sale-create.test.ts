@@ -286,7 +286,7 @@ describe('Crear venta', () => {
     expect(await profileStatus(ctx.profiles[2].id)).toBe('available');
   });
 
-  it('a pending sale does not reserve its profile: other sales can still be registered on it', async () => {
+  it('a pending sale reserves its profile: a second sale on it is refused', async () => {
     const ctx = await context();
 
     const results = await Promise.allSettled([submit(ctx, values(ctx)), submit(ctx, values(ctx)), submit(ctx, values(ctx))]);
@@ -294,9 +294,13 @@ describe('Crear venta', () => {
     const redirected = results.filter(
       (r) => r.status === 'rejected' && String((r.reason as Error).message).startsWith('NEXT_REDIRECT:'),
     );
-    expect(redirected).toHaveLength(3);
-    expect((await db.select().from(sales)).every((s) => s.status === 'pending')).toBe(true);
-    expect(await db.select().from(saleProfiles)).toHaveLength(3);
+    // Only the first one goes through: the rest find the profile already committed.
+    expect(redirected).toHaveLength(1);
+    const registered = await db.select().from(sales);
+    expect(registered).toHaveLength(1);
+    expect(registered[0].status).toBe('pending');
+    expect(await db.select().from(saleProfiles)).toHaveLength(1);
+    // Reserved, but not occupied and not billed: that only happens on approval.
     expect(await db.select().from(transactions)).toHaveLength(0);
     expect(await profileStatus(ctx.profiles[0].id)).toBe('available');
   });

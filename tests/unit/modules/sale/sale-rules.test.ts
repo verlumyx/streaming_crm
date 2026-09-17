@@ -27,7 +27,31 @@ const profile = (overrides: Partial<LockedProfile> = {}): LockedProfile => ({
   accountServiceId: 's1',
   linkedToSale: false,
   heldByAnotherSale: false,
+  reservedByPendingSale: false,
   ...overrides,
+});
+
+describe('sale rules: a pending sale reserves its profiles', () => {
+  it('an available profile another pending sale already asked for cannot be sold again', () => {
+    const reserved = profile({ status: 'available', reservedByPendingSale: true });
+
+    expect(unavailableProfiles([reserved])).toEqual([{ id: 'p1', label: 'cuenta@x.com · Perfil 1' }]);
+    // Not even when reactivating: approving the other sale would occupy it.
+    expect(unavailableProfiles([reserved], { allowOwnOccupied: true })).toHaveLength(1);
+  });
+
+  it('the reservation does not block approval: there the race is decided by `occupied`', () => {
+    const reserved = profile({ status: 'available', reservedByPendingSale: true });
+
+    expect(unavailableProfiles([reserved], { allowPendingReservation: true })).toEqual([]);
+    // Once someone approved, the profile is occupied and the second approval does conflict.
+    const taken = profile({ status: 'occupied', reservedByPendingSale: true });
+    expect(unavailableProfiles([taken], { allowPendingReservation: true })).toHaveLength(1);
+  });
+
+  it('a profile reserved by the sale being processed stays assignable', () => {
+    expect(unavailableProfiles([profile({ status: 'available', reservedByPendingSale: false })])).toEqual([]);
+  });
 });
 
 describe('sale rules: approval and expulsion', () => {
