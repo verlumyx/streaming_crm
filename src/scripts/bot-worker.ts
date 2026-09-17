@@ -8,6 +8,10 @@ import 'dotenv/config';
  * the knowledge base indexed. Runs under `tsx`, outside Next.js, with no request timeout.
  *
  * Safe to run several instances: every claim uses `FOR UPDATE SKIP LOCKED`.
+ *
+ * Runs with `--conditions=react-server` (see package.json): this is a server environment, but
+ * outside Next the `server-only` guard its modules import would throw. The condition resolves
+ * that package to its own empty module, so the guard keeps protecting Client Components only.
  */
 const POLL_MS = Number(process.env.BOT_WORKER_POLL_MS ?? 2000);
 const BATCH_SIZE = Number(process.env.BOT_WORKER_BATCH_SIZE ?? 5);

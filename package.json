@@ -18,8 +18,8 @@
     "db:reset": "tsx src/db/reset.ts",
     "sales:expire": "tsx src/scripts/sales-expire.ts",
     "format": "prettier --write .",
-    "knowledge:ingest": "tsx src/scripts/knowledge-ingest.ts",
-    "bot:worker": "tsx src/scripts/bot-worker.ts"
+    "knowledge:ingest": "tsx --conditions=react-server src/scripts/knowledge-ingest.ts",
+    "bot:worker": "tsx --conditions=react-server src/scripts/bot-worker.ts"
   },
   "dependencies": {
     "@google/genai": "^2.22.0",

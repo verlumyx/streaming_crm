@@ -6,6 +6,10 @@ import 'dotenv/config';
  * Runs under `tsx`, outside Next.js, because embedding is a multi-second HTTP call per document
  * and the project's rule is that a request-scoped transaction never spans network I/O.
  * Safe to run concurrently: jobs are claimed with `FOR UPDATE SKIP LOCKED`.
+ *
+ * Runs with `--conditions=react-server` (see package.json): this is a server environment, but
+ * outside Next the `server-only` guard its modules import would throw. The condition resolves
+ * that package to its own empty module, so the guard keeps protecting Client Components only.
  */
 async function main() {
   // Lazy imports so dotenv runs before `db/client` reads DATABASE_URL.
