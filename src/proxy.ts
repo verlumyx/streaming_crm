@@ -24,21 +24,20 @@ function isPublicPath(pathname: string): boolean {
 /**
  * Optimistic auth gate: only checks that a session cookie exists (no DB call).
  * Pages still validate the session server-side with `auth.api.getSession`.
+ *
+ * Public paths are always let through, `/login` included. Sending a request with a cookie to
+ * `/dashboard` from here would be guessing: a cookie that no longer validates (the session was
+ * revoked, the database was reset, the secret changed) would bounce straight back to `/login` and
+ * loop forever, with no way out but clearing cookies by hand. `/login` decides for itself, where
+ * the real session can be read.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (isPublicPath(pathname)) return NextResponse.next();
+
   const hasSessionCookie = Boolean(getSessionCookie(request, { cookiePrefix: COOKIE_PREFIX }));
-
-  if (isPublicPath(pathname)) {
-    if (pathname === '/login' && hasSessionCookie) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-    return NextResponse.next();
-  }
-
-  if (!hasSessionCookie) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+  if (!hasSessionCookie) return NextResponse.redirect(new URL('/login', request.url));
 
   return NextResponse.next();
 }

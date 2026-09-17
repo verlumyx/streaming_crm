@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/modules/shared/auth/session';
 import { AuthShell } from '@/app/(auth)/_components/AuthShell';
 import { LoginForm } from '@/app/(auth)/login/LoginForm';
 
@@ -14,6 +16,10 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  // Checked here and not in the proxy: only a real session should send someone away from the login
+  // page. A stale cookie renders the form instead of bouncing back and forth forever.
+  if (await getSessionUser()) redirect('/dashboard');
+
   const { status } = await searchParams;
   const statusMessage = status ? STATUS_MESSAGES[status] : undefined;
 

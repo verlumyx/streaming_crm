@@ -60,6 +60,13 @@ describe('Landing (welcome)', () => {
 describe('Proxy: rutas públicas', () => {
   const request = (path: string) => new NextRequest(new URL(path, 'http://localhost:3001'));
 
+  /** A request carrying a session cookie, valid or not — the proxy cannot tell them apart. */
+  const withSessionCookie = (path: string) => {
+    const next = request(path);
+    next.cookies.set('streaming-crm.session_token', 'cualquier-token');
+    return next;
+  };
+
   it('lets guests reach the landing and the contact page', () => {
     expect(proxy(request('/')).headers.get('location')).toBeNull();
     expect(proxy(request('/contact')).headers.get('location')).toBeNull();
@@ -68,5 +75,20 @@ describe('Proxy: rutas públicas', () => {
   it('still sends guests to the login for private paths', () => {
     expect(proxy(request('/dashboard')).headers.get('location')).toBe('http://localhost:3001/login');
     expect(proxy(request('/something')).headers.get('location')).toBe('http://localhost:3001/login');
+  });
+
+  it('lets a request with a session cookie through to a private path', () => {
+    expect(proxy(withSessionCookie('/dashboard')).headers.get('location')).toBeNull();
+  });
+
+  /**
+   * Regression: the proxy used to send any request carrying a cookie from `/login` to `/dashboard`.
+   * A cookie that no longer validates then bounced straight back, looping forever with no way out
+   * but clearing cookies by hand. Only a real session may send someone away from the login page,
+   * and that is decided by the page itself.
+   */
+  it('never bounces a request off the login page, even when it carries a stale cookie', () => {
+    expect(proxy(withSessionCookie('/login')).headers.get('location')).toBeNull();
+    expect(proxy(request('/login')).headers.get('location')).toBeNull();
   });
 });
