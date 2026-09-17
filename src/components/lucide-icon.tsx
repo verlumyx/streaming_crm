@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import {
   ArrowLeftRight,
+  BookOpen,
+  Bot,
   Boxes,
   Building2,
   CalendarClock,
@@ -11,11 +13,14 @@ import {
   KeyRound,
   LayoutGrid,
   LibraryBig,
+  ListChecks,
   LogOut,
+  MessagesSquare,
   NotebookPen,
   Package,
   PieChart,
   Scale,
+  Radio,
   Settings,
   ShoppingCart,
   Undo2,
@@ -48,6 +53,11 @@ export const MENU_ICONS = {
   Users,
   Building2,
   Settings,
+  Bot,
+  Radio,
+  BookOpen,
+  MessagesSquare,
+  ListChecks,
   LogOut,
 } as const satisfies Record<string, LucideIconComponent>;
 

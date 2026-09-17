@@ -18,6 +18,7 @@ import type { CreateClientCommand } from '../commands/create-client.command';
 import type { SearchClientCommand } from '../commands/search-client.command';
 import type { UpdateClientCommand } from '../commands/update-client.command';
 import type { UpdateStatusClientCommand } from '../commands/update-status-client.command';
+import { toE164 } from '@/lib/phone';
 
 export class DrizzleClientRepository implements ClientRepository {
   constructor(private readonly db: DbExecutor) {}
@@ -32,6 +33,7 @@ export class DrizzleClientRepository implements ClientRepository {
       code,
       name: command.name,
       phone: command.phone,
+      phoneE164: toE164(command.phone),
       email: command.email,
       notes: command.notes,
       status: 'active',
@@ -57,7 +59,13 @@ export class DrizzleClientRepository implements ClientRepository {
   async update(row: ClientRow, command: UpdateClientCommand): Promise<void> {
     await this.db
       .update(clients)
-      .set({ name: command.name, phone: command.phone, email: command.email, notes: command.notes })
+      .set({
+        name: command.name,
+        phone: command.phone,
+        phoneE164: toE164(command.phone),
+        email: command.email,
+        notes: command.notes,
+      })
       .where(eq(clients.id, row.id));
   }
 

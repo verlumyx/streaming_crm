@@ -1,0 +1,10 @@
+{
+  "update_id": 874251,
+  "message": {
+    "message_id": 42,
+    "from": { "id": 987654321, "is_bot": false, "first_name": "Camila", "last_name": "Rojas", "username": "camirojas" },
+    "chat": { "id": 987654321, "first_name": "Camila", "type": "private" },
+    "date": 1758000000,
+    "text": "Hola, ¿cuánto cuesta Netflix?"
+  }
+}

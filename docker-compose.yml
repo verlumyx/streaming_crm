@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: ./docker/postgres
+    image: streaming-crm-postgres:16-pgvector
     container_name: streaming_crm_postgres
     restart: unless-stopped
     environment:

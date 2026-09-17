@@ -36,6 +36,20 @@
       "when": 1789581617288,
       "tag": "0004_sale_approval_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789658624622,
+      "tag": "0005_bot_and_knowledge",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789658664473,
+      "tag": "0006_client_phone_e164_backfill",
+      "breakpoints": true
     }
   ]
 }

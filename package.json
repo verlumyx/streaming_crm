@@ -17,9 +17,12 @@
     "db:seed": "tsx src/db/seed/index.ts",
     "db:reset": "tsx src/db/reset.ts",
     "sales:expire": "tsx src/scripts/sales-expire.ts",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "knowledge:ingest": "tsx src/scripts/knowledge-ingest.ts",
+    "bot:worker": "tsx src/scripts/bot-worker.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.22.0",
     "better-auth": "^1.7.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -18,6 +18,9 @@ export const clients = pgTable(
     code: varchar('code', { length: 12 }).notNull(),
     name: varchar('name', { length: 150 }).notNull(),
     phone: varchar('phone', { length: 30 }),
+    /** Best-effort E.164 form of `phone`, derived on write. Lets an inbound WhatsApp/Telegram
+     *  contact be matched to a client. Not unique: legacy rows may collide. */
+    phoneE164: varchar('phone_e164', { length: 20 }),
     email: varchar('email', { length: 255 }),
     status: varchar('status', { length: 20 }).notNull().default('active').$type<ClientStatus>(),
     notes: text('notes'),
@@ -29,6 +32,7 @@ export const clients = pgTable(
     uniqueIndex('app_clients_company_id_code_unique').on(t.companyId, t.code),
     uniqueIndex('app_clients_company_id_email_unique').on(t.companyId, t.email),
     index('app_clients_name_idx').on(t.name),
+    index('app_clients_company_id_phone_e164_idx').on(t.companyId, t.phoneE164),
     index('app_clients_status_idx').on(t.status),
     index('app_clients_created_at_idx').on(t.createdAt),
   ],

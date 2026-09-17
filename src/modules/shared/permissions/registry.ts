@@ -10,6 +10,7 @@ import { SALE_MODULE } from '@/modules/sale/permissions';
 import { MANUAL_TRANSACTION_MODULE } from '@/modules/manual-transaction/permissions';
 import { REFUND_MODULE } from '@/modules/refund/permissions';
 import { REPORT_MODULE } from '@/modules/report/permissions';
+import { BOT_MODULE } from '@/modules/bot/permissions';
 
 /** Every module's permission catalogue. Seeded into `app_modules` / `app_permissions` by `pnpm db:seed`. */
 export const PERMISSION_REGISTRY: readonly ModuleDefinition[] = [
@@ -24,6 +25,7 @@ export const PERMISSION_REGISTRY: readonly ModuleDefinition[] = [
   MANUAL_TRANSACTION_MODULE,
   REFUND_MODULE,
   REPORT_MODULE,
+  BOT_MODULE,
 ];
 
 /** Modules gated on `is_system_owner` only: hidden from the roles tree and excluded from `permissionType = 'all'`. */

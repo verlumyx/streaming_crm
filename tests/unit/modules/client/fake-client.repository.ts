@@ -11,6 +11,7 @@ import type { UpdateClientCommand } from '@/modules/client/commands/update-clien
 import type { UpdateStatusClientCommand } from '@/modules/client/commands/update-status-client.command';
 import { ClientNotFoundException } from '@/modules/client/exceptions/client-not-found.exception';
 import { formatSequentialCode } from '@/modules/shared/infrastructure/sequential-code';
+import { toE164 } from '@/lib/phone';
 
 /** In-memory `ClientRepository` for service unit tests. */
 export class FakeClientRepository implements ClientRepository {
@@ -24,6 +25,7 @@ export class FakeClientRepository implements ClientRepository {
       code: formatSequentialCode('CLI', sequence),
       name: command.name,
       phone: command.phone,
+      phoneE164: toE164(command.phone),
       email: command.email,
       status: 'active',
       notes: command.notes,

@@ -17,6 +17,7 @@ export type MenuDefinition = {
 
 const CATALOG_ID = '019e8a10-0001-7000-a000-000000000001';
 const REPORTS_ID = '019e8a10-0004-7000-a000-000000000004';
+const BOT_ID = '019f1000-0001-7000-a000-000000000001';
 
 /** Sidebar entries (single source of truth). Merge of the original SQL seed and MenuSeeder. */
 export const MENU_REGISTRY: readonly MenuDefinition[] = [
@@ -35,6 +36,12 @@ export const MENU_REGISTRY: readonly MenuDefinition[] = [
   { id: '019e8a10-0009-7000-a000-000000000009', parentId: REPORTS_ID, title: 'Ingresos y Gastos', url: '/reports/income-expenses', permission: 'reports.income_expenses', icon: 'Scale', order: 2, section: 'main' },
   { id: '019e8a10-000a-7000-a000-00000000000a', parentId: REPORTS_ID, title: 'Servicio / Plan', url: '/reports/service-plan', permission: 'reports.service_plan', icon: 'PieChart', order: 3, section: 'main' },
   { id: '019e8a10-000b-7000-a000-00000000000b', parentId: REPORTS_ID, title: 'Vencimientos', url: '/reports/expirations', permission: 'reports.expirations', icon: 'CalendarClock', order: 4, section: 'main' },
+  { id: BOT_ID, parentId: null, title: 'Bot IA', url: '/bot', permission: 'bot.show', icon: 'Bot', order: 9, section: 'main' },
+  { id: '019f1000-0006-7000-a000-000000000006', parentId: BOT_ID, title: 'Panel', url: '/bot', permission: 'bot.show', icon: 'Bot', order: 1, section: 'main' },
+  { id: '019f1000-0002-7000-a000-000000000002', parentId: BOT_ID, title: 'Conversaciones', url: '/bot/conversations', permission: 'bot.conversations', icon: 'MessagesSquare', order: 2, section: 'main' },
+  { id: '019f1000-0003-7000-a000-000000000003', parentId: BOT_ID, title: 'Base de conocimiento', url: '/bot/knowledge', permission: 'bot.knowledge', icon: 'BookOpen', order: 3, section: 'main' },
+  { id: '019f1000-0004-7000-a000-000000000004', parentId: BOT_ID, title: 'Canales', url: '/bot/channels', permission: 'bot.channels', icon: 'Radio', order: 4, section: 'main' },
+  { id: '019f1000-0005-7000-a000-000000000005', parentId: BOT_ID, title: 'Cola de eventos', url: '/bot/events', permission: 'bot.events', icon: 'ListChecks', order: 5, section: 'main' },
   // footer
   { id: '019cf226-1285-723c-ba82-f582cf993210', parentId: null, title: 'Usuarios', url: '/users', permission: 'users.list', icon: 'UserCheck', order: 1, section: 'footer' },
   { id: '019cf226-1285-723c-ba82-f582d08b1c08', parentId: null, title: 'Roles', url: '/roles', permission: 'roles.list', icon: 'Users', order: 2, section: 'footer' },

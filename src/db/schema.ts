@@ -15,3 +15,8 @@ export * from '@/modules/refund/models/refund.model';
 export * from '@/modules/manual-transaction/models/manual-transaction.model';
 export * from '@/modules/lead/models/lead.model';
 export * from '@/modules/api-auth/models/api-token.model';
+export * from '@/modules/bot/models/bot-settings.model';
+export * from '@/modules/bot/models/bot-channel.model';
+export * from '@/modules/bot/models/bot-event.model';
+export * from '@/modules/conversation/models/conversation.model';
+export * from '@/modules/knowledge/models/knowledge.model';
