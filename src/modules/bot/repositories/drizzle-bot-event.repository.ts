@@ -3,6 +3,7 @@ import { and, count, desc, eq, sql } from 'drizzle-orm';
 import type { DbExecutor } from '@/modules/shared/infrastructure/db-executor';
 import {
   botEvents,
+  isFinalAttempt,
   BOT_EVENT_BACKOFF_BASE_SECONDS,
   type BotEventRow,
   type BotEventStatus,
@@ -67,7 +68,7 @@ export class DrizzleBotEventRepository implements BotEventRepository {
   }
 
   async markFailed(row: BotEventRow, error: string): Promise<'failed' | 'dlq'> {
-    const exhausted = row.attempts >= row.maxAttempts;
+    const exhausted = isFinalAttempt(row);
     const status: BotEventStatus = exhausted ? 'dlq' : 'failed';
     // 2^attempts * 15s: a provider outage backs off instead of hammering.
     const delaySeconds = BOT_EVENT_BACKOFF_BASE_SECONDS * 2 ** row.attempts;

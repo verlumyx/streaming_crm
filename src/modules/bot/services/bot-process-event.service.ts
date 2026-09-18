@@ -7,15 +7,16 @@ import type { ChannelGateway } from '../channels/channel-gateway';
 import type { InboundMessage } from '../channels/channel-gateway';
 import { ChannelSendError } from '../channels/whatsapp/meta-cloud.gateway';
 import { chunkMessage } from '../domain/message-chunking';
+import { OUT_OF_SERVICE_MESSAGE } from '../domain/service-notice';
 import { buildSystemPrompt } from '../domain/system-prompt';
-import type { BotEventRow } from '../models/bot-event.model';
+import { isFinalAttempt, type BotEventRow } from '../models/bot-event.model';
 import type { BotMessageRow } from '@/modules/conversation/models/conversation.model';
 import type { BotChannelRepository } from '../repositories/bot-channel.repository';
 import type { BotSettingsRepository } from '../repositories/bot-settings.repository';
 import { buildToolRegistry } from '../tools/tool-registry';
 import type { ToolContext } from '../tools/bot-tool';
 import { BotToolRunner } from './bot-tool-runner.service';
-import { BotAgentRunner } from './bot-agent-runner.service';
+import { BotAgentRunner, type AgentOutcome } from './bot-agent-runner.service';
 
 /** What happened to one event; the worker only aggregates these. */
 export type ProcessOutcome = 'answered' | 'discarded' | 'silenced';
@@ -102,25 +103,40 @@ export class BotProcessEventService {
       ? await createClientContainer(this.deps.db).findService.execute(contact.clientId, event.companyId)
       : null;
 
-    const outcome = await runner.run({
-      system: buildSystemPrompt({
-        companyName: channel.row.displayName,
-        assistantName: settings.assistantName,
-        today: context.today,
-        personaPrompt: settings.personaPrompt,
-        paymentInstructions: settings.paymentInstructions,
-        contact: { displayName: contact.displayName, phoneE164: contact.phoneE164 },
-        client: client ? { code: client.code, name: client.name } : null,
-        autoCreateSale: settings.autoCreateSale,
-        handoffEnabled: settings.handoffEnabled,
-      }),
-      history: toChatTurns(history),
-      tools,
-      model: settings.chatModel,
-      temperature: Number(settings.temperature),
-      maxIterations: settings.maxToolIterations,
-      context,
-    });
+    const notice = {
+      event,
+      conversationId: conversation.id,
+      to: message.contactExternalId,
+      channel,
+      handoffMinutes: settings.handoffMinutes,
+    };
+
+    let outcome: AgentOutcome;
+    try {
+      outcome = await runner.run({
+        system: buildSystemPrompt({
+          companyName: channel.row.displayName,
+          assistantName: settings.assistantName,
+          today: context.today,
+          personaPrompt: settings.personaPrompt,
+          paymentInstructions: settings.paymentInstructions,
+          contact: { displayName: contact.displayName, phoneE164: contact.phoneE164 },
+          client: client ? { code: client.code, name: client.name } : null,
+          autoCreateSale: settings.autoCreateSale,
+          handoffEnabled: settings.handoffEnabled,
+        }),
+        history: toChatTurns(history),
+        tools,
+        model: settings.chatModel,
+        temperature: Number(settings.temperature),
+        maxIterations: settings.maxToolIterations,
+        context,
+      });
+    } catch (error) {
+      // Earlier attempts still have a retry coming; only the last one owes the customer a word.
+      if (isFinalAttempt(event)) await this.warnOutOfService({ ...notice, reason: describeError(error) });
+      throw error;
+    }
 
     for (const run of outcome.toolRuns) {
       await conversations.repository.appendMessage({
@@ -137,13 +153,13 @@ export class BotProcessEventService {
 
     const reply = outcome.text?.trim();
     if (!reply) {
-      // The model ran out of iterations without answering: escalate instead of going silent.
-      await conversations.handoffService.execute(
-        conversation.id,
-        outcome.exhausted ? 'El asistente no logró resolver la consulta.' : 'El asistente no generó respuesta.',
-        null,
-        settings.handoffMinutes,
-      );
+      // Silence reads as broken to whoever is waiting, so it gets the same treatment as a failure.
+      await this.warnOutOfService({
+        ...notice,
+        reason: outcome.exhausted
+          ? 'El asistente no logró resolver la consulta.'
+          : 'El asistente no generó respuesta.',
+      });
       return 'silenced';
     }
 
@@ -159,6 +175,49 @@ export class BotProcessEventService {
     });
 
     return 'answered';
+  }
+
+  /**
+   * Last resort: tell the customer the assistant is down instead of leaving the message unanswered,
+   * and put the thread in human hands. The notice is deliberately not tied to the event — otherwise
+   * `hasAnsweredEvent` would take it for an answer and requeueing the event would never reply.
+   */
+  private async warnOutOfService(input: {
+    event: BotEventRow;
+    conversationId: string;
+    to: string;
+    channel: NonNullable<Awaited<ReturnType<BotChannelRepository['findWithCredentials']>>>;
+    handoffMinutes: number;
+    reason: string;
+  }): Promise<void> {
+    const conversations = createConversationContainer(this.deps.db);
+    await conversations.handoffService.execute(
+      input.conversationId,
+      input.reason,
+      null,
+      input.handoffMinutes,
+    );
+
+    const stored = await conversations.repository.appendMessage({
+      companyId: input.event.companyId,
+      conversationId: input.conversationId,
+      eventId: null,
+      role: 'assistant',
+      content: OUT_OF_SERVICE_MESSAGE,
+      status: 'queued',
+    });
+
+    try {
+      const sent = await this.deps
+        .gatewayFor(input.channel.row)
+        .send(input.to, OUT_OF_SERVICE_MESSAGE, input.channel.credentials);
+      await conversations.repository.markMessageSent(stored.id, sent.externalMessageId);
+    } catch (error) {
+      // The customer is already being escalated; a failed notice must not hide the original error.
+      const reason = describeSendError(error);
+      await conversations.repository.markMessageFailed(stored.id, reason);
+      await this.deps.channelRepository.touch(input.channel.row.id, reason);
+    }
   }
 
   private async reply(input: {
@@ -210,6 +269,10 @@ function toChatTurns(messages: BotMessageRow[]): ChatTurn[] {
       role: message.role === 'user' ? ('user' as const) : ('model' as const),
       parts: [{ kind: 'text' as const, text: message.content }],
     }));
+}
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function describeSendError(error: unknown): string {

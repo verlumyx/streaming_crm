@@ -17,6 +17,7 @@ import { seedBotSettings, seedChannel, whatsappRequest, whatsappTextPayload } fr
 import { FakeChatModel, FakeEmbeddingModel, type ScriptedTurn } from '../../../unit/modules/bot/fake-ai';
 import { MetaCloudChannelGateway } from '@/modules/bot/channels/whatsapp/meta-cloud.gateway';
 import { AiUnavailableException } from '@/modules/bot/exceptions/ai-unavailable.exception';
+import { OUT_OF_SERVICE_MESSAGE } from '@/modules/bot/domain/service-notice';
 import type { ChatModel } from '@/modules/bot/infrastructure/ai-ports';
 import type { BotChannelRow } from '@/modules/bot/models/bot-channel.model';
 
@@ -274,9 +275,51 @@ describe('El bot atiende un mensaje entrante', () => {
     const report = await drain(looping, gateway);
 
     expect(report).toMatchObject({ silenced: 1 });
-    expect(sent).toEqual([]);
+    expect(sent).toEqual([{ to: '584121234567', text: OUT_OF_SERVICE_MESSAGE }]);
     const [conversation] = await db.select().from(botConversations);
     expect(conversation).toMatchObject({ handledBy: 'human' });
+  });
+
+  it('warns the customer and escalates when the last attempt also fails', async () => {
+    const { channel } = await context([]);
+    const gateway = new RecordingGateway();
+    const sent = gateway.sent;
+    const drainFailing = () =>
+      createBotContainer(db, { chat: unavailable, embeddings, gatewayFor: () => gateway }).drainService(10);
+
+    await deliver(channel, '¿Tienes perfiles de Netflix?');
+    // One attempt only: the first failure is already the one that lands in the DLQ.
+    await db.update(botEvents).set({ maxAttempts: 1 });
+    const report = await drainFailing();
+
+    expect(report).toMatchObject({ claimed: 1, dlq: 1, answered: 0 });
+    expect(sent).toEqual([{ to: '584121234567', text: OUT_OF_SERVICE_MESSAGE }]);
+
+    const [conversation] = await db.select().from(botConversations);
+    expect(conversation).toMatchObject({ handledBy: 'human' });
+    expect(conversation.handoffReason).toContain('429');
+
+    // The notice is stored as sent, and is not tied to the event: a requeue can still answer.
+    const [notice] = await db.select().from(botMessages).where(eq(botMessages.role, 'assistant'));
+    expect(notice).toMatchObject({ content: OUT_OF_SERVICE_MESSAGE, status: 'sent', eventId: null });
+  });
+
+  it('says nothing while the event still has retries left', async () => {
+    const { channel } = await context([]);
+    const gateway = new RecordingGateway();
+    const sent = gateway.sent;
+
+    await deliver(channel, '¿Tienes perfiles de Netflix?');
+    const report = await createBotContainer(db, {
+      chat: unavailable,
+      embeddings,
+      gatewayFor: () => gateway,
+    }).drainService(10);
+
+    expect(report).toMatchObject({ claimed: 1, failed: 1 });
+    expect(sent).toEqual([]);
+    const [conversation] = await db.select().from(botConversations);
+    expect(conversation.handledBy).toBe('bot');
   });
 
   it('keeps each company isolated: a contact only ever sees its own catalogue', async () => {

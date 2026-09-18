@@ -60,4 +60,13 @@ export const botEventsRelations = relations(botEvents, ({ one }) => ({
 }));
 
 export type BotEventRow = InferSelectModel<typeof botEvents>;
+
+/**
+ * The claim already counted the attempt in progress, so this is the one that lands in the DLQ:
+ * whatever it fails to do, nobody will retry.
+ */
+export function isFinalAttempt(event: Pick<BotEventRow, 'attempts' | 'maxAttempts'>): boolean {
+  return event.attempts >= event.maxAttempts;
+}
+
 export type NewBotEventRow = InferInsertModel<typeof botEvents>;
