@@ -8,6 +8,8 @@ export type BotSettingsStatus = (typeof BOT_SETTINGS_STATUSES)[number];
 
 export const DEFAULT_CHAT_MODEL = 'gemini-flash-latest';
 export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
+/** Its Azure counterpart, truncated to the same dimensions. */
+export const DEFAULT_AZURE_EMBEDDING_MODEL = 'text-embedding-3-small';
 /** Matryoshka output dimension of `gemini-embedding-001`. Changing it invalidates every stored chunk. */
 export const DEFAULT_EMBEDDING_DIMENSIONS = 768;
 

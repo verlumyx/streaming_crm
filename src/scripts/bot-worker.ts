@@ -34,7 +34,7 @@ async function main() {
   const { createBotContainer } = await import('@/modules/bot/container');
   const { createConversationContainer } = await import('@/modules/conversation/container');
   const { createKnowledgeContainer } = await import('@/modules/knowledge/container');
-  const { geminiEmbeddings } = await import('@/modules/bot/infrastructure/ai-factory');
+  const { embeddingModel } = await import('@/modules/bot/infrastructure/ai-factory');
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {
@@ -60,7 +60,7 @@ async function main() {
       if (tick % MAINTENANCE_EVERY === 0) {
         const reclaimed = await createBotContainer(db).eventRepository.reclaimStuck(STUCK_MINUTES);
         const returned = await createConversationContainer(db).repository.expireHandoffs();
-        const ingest = await createKnowledgeContainer(db, geminiEmbeddings()).ingestService.execute(BATCH_SIZE);
+        const ingest = await createKnowledgeContainer(db, embeddingModel()).ingestService.execute(BATCH_SIZE);
 
         const bot = createBotContainer(db);
         const botUserIds = await bot.settingsRepository.listAgentUserIds();

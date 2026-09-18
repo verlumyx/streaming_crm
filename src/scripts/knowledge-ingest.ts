@@ -15,10 +15,10 @@ async function main() {
   // Lazy imports so dotenv runs before `db/client` reads DATABASE_URL.
   const { db } = await import('@/db/client');
   const { createKnowledgeContainer } = await import('@/modules/knowledge/container');
-  const { geminiEmbeddings } = await import('@/modules/bot/infrastructure/ai-factory');
+  const { embeddingModel } = await import('@/modules/bot/infrastructure/ai-factory');
 
   const limit = Number(process.argv.find((arg) => arg.startsWith('--limit='))?.split('=')[1] ?? 20);
-  const report = await createKnowledgeContainer(db, geminiEmbeddings()).ingestService.execute(limit);
+  const report = await createKnowledgeContainer(db, embeddingModel()).ingestService.execute(limit);
 
   console.info(
     `Documentos tomados: ${report.claimed}. Indexados: ${report.indexed}. Fallidos: ${report.failed}.`,

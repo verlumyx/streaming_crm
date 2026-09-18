@@ -20,7 +20,12 @@ export class KnowledgeRetrieveService {
     if (command.query.trim() === '') return [];
 
     const embedding = await this.embeddings.embedQuery(command.query);
-    const candidates = await this.repository.searchSimilar(command.companyId, embedding, command.topK * OVERFETCH);
+    const candidates = await this.repository.searchSimilar(
+      command.companyId,
+      embedding,
+      command.topK * OVERFETCH,
+      this.embeddings.model,
+    );
 
     return candidates.filter((match) => match.similarity >= command.minScore).slice(0, command.topK);
   }

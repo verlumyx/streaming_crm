@@ -21,6 +21,11 @@ import { FakeEmbeddingModel } from '../../../unit/modules/bot/fake-ai';
 const embeddings = new FakeEmbeddingModel();
 const knowledge = () => createKnowledgeContainer(db, embeddings);
 
+async function ingestStatusOf(id: string) {
+  const [row] = await db.select().from(knowledgeDocuments).where(eq(knowledgeDocuments.id, id));
+  return row.ingestStatus;
+}
+
 async function createDocument(companyId: string, title: string, content: string) {
   const id = uuidv7();
   await expectRedirect(
@@ -100,6 +105,57 @@ describe('Base de conocimiento', () => {
     expect(matches.length).toBeGreaterThan(0);
     expect(matches[0].documentTitle).toBe('Reembolsos');
     expect(matches[0].similarity).toBeGreaterThan(0);
+  });
+
+  it('ignores the chunks left behind by the previous embedding model', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    setSessionUser(user);
+    await createDocument(company.id, 'Reembolsos', 'No hacemos reembolsos después de siete días de la compra.');
+    await knowledge().ingestService.execute();
+
+    // A cosine distance between vectors of two models still sorts, so an unfiltered search would
+    // return this document as a confident match instead of nothing.
+    const migrated = createKnowledgeContainer(db, new FakeEmbeddingModel(768, 'otro-modelo'));
+    const matches = await migrated.retrieveService.execute(
+      new RetrieveKnowledgeCommand(company.id, 'quiero un reembolso', 5, 0),
+    );
+
+    expect(matches).toEqual([]);
+  });
+
+  it('queues the documents of the previous model for reingest, and only those', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    setSessionUser(user);
+    const stale = await createDocument(company.id, 'Reembolsos', 'No hacemos reembolsos después de siete días.');
+    await knowledge().ingestService.execute();
+    const pending = await createDocument(company.id, 'Horario', 'Atendemos de lunes a viernes.');
+
+    const queued = await knowledge().repository.markStaleForReingest('otro-modelo');
+
+    expect(queued).toBe(1);
+    expect(await ingestStatusOf(stale)).toBe('pending');
+    expect(await ingestStatusOf(pending)).toBe('pending');
+    // Running it again is a no-op: nothing is indexed with the old model any more.
+    expect(await knowledge().repository.markStaleForReingest('otro-modelo')).toBe(0);
+  });
+
+  it('re-embeds the queued documents with the new model', async () => {
+    const { user, company } = await createUserWithCompany(db);
+    setSessionUser(user);
+    const id = await createDocument(company.id, 'Reembolsos', 'No hacemos reembolsos después de siete días.');
+    await knowledge().ingestService.execute();
+
+    const migrated = createKnowledgeContainer(db, new FakeEmbeddingModel(768, 'otro-modelo'));
+    await migrated.repository.markStaleForReingest('otro-modelo');
+    await migrated.ingestService.execute();
+
+    const [row] = await db.select().from(knowledgeDocuments).where(eq(knowledgeDocuments.id, id));
+    expect(row).toMatchObject({ ingestStatus: 'indexed', embeddingModel: 'otro-modelo' });
+
+    const matches = await migrated.retrieveService.execute(
+      new RetrieveKnowledgeCommand(company.id, 'quiero un reembolso', 5, 0),
+    );
+    expect(matches).not.toHaveLength(0);
   });
 
   it('never retrieves another company knowledge', async () => {

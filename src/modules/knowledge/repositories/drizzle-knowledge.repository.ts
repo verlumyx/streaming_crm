@@ -104,6 +104,21 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
       .where(eq(knowledgeDocuments.id, row.id));
   }
 
+  async markStaleForReingest(embeddingModel: string): Promise<number> {
+    const rows = await this.db
+      .update(knowledgeDocuments)
+      .set({ ingestStatus: 'pending', ingestError: null })
+      .where(
+        and(
+          eq(knowledgeDocuments.ingestStatus, 'indexed'),
+          sql`${knowledgeDocuments.embeddingModel} is distinct from ${embeddingModel}`,
+        ),
+      )
+      .returning({ id: knowledgeDocuments.id });
+
+    return rows.length;
+  }
+
   async claimPendingIngest(limit: number): Promise<KnowledgeIngestJob[]> {
     const rows = await this.db.execute<KnowledgeIngestJob>(sql`
       update ${knowledgeDocuments}
@@ -169,7 +184,12 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
    * `1 - distance DESC` would silently fall back to a sequential scan. The score threshold is
    * applied by the service afterwards, for the same reason.
    */
-  async searchSimilar(companyId: string, embedding: number[], limit: number): Promise<KnowledgeMatch[]> {
+  async searchSimilar(
+    companyId: string,
+    embedding: number[],
+    limit: number,
+    embeddingModel: string,
+  ): Promise<KnowledgeMatch[]> {
     const distance = cosineDistance(knowledgeChunks.embedding, embedding);
 
     const rows = await this.db
@@ -182,7 +202,13 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
       })
       .from(knowledgeChunks)
       .innerJoin(knowledgeDocuments, eq(knowledgeDocuments.id, knowledgeChunks.documentId))
-      .where(and(eq(knowledgeChunks.companyId, companyId), eq(knowledgeDocuments.status, 'active')))
+      .where(
+        and(
+          eq(knowledgeChunks.companyId, companyId),
+          eq(knowledgeDocuments.status, 'active'),
+          eq(knowledgeDocuments.embeddingModel, embeddingModel),
+        ),
+      )
       .orderBy(asc(distance))
       .limit(limit);
 

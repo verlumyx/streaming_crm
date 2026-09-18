@@ -132,9 +132,24 @@ export class FakeKnowledgeRepository implements KnowledgeRepository {
     this.rows[index] = { ...this.rows[index], ingestStatus: 'failed', ingestError: error };
   }
 
-  async searchSimilar(companyId: string, embedding: number[], limit: number): Promise<KnowledgeMatch[]> {
+  async markStaleForReingest(embeddingModel: string): Promise<number> {
+    const stale = this.rows.filter((r) => r.ingestStatus === 'indexed' && r.embeddingModel !== embeddingModel);
+    for (const row of stale) {
+      this.rows[this.rows.indexOf(row)] = { ...row, ingestStatus: 'pending', ingestError: null };
+    }
+    return stale.length;
+  }
+
+  async searchSimilar(
+    companyId: string,
+    embedding: number[],
+    limit: number,
+    embeddingModel: string,
+  ): Promise<KnowledgeMatch[]> {
     const activeDocuments = new Set(
-      this.rows.filter((r) => r.companyId === companyId && r.status === 'active').map((r) => r.id),
+      this.rows
+        .filter((r) => r.companyId === companyId && r.status === 'active' && r.embeddingModel === embeddingModel)
+        .map((r) => r.id),
     );
 
     return this.chunks

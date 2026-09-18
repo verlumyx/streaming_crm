@@ -2,7 +2,7 @@ import 'server-only';
 import type { DbExecutor } from '@/modules/shared/infrastructure/db-executor';
 import { createConversationContainer } from '@/modules/conversation/container';
 import type { ChatModel, EmbeddingModel } from './infrastructure/ai-ports';
-import { geminiChat, geminiEmbeddings } from './infrastructure/ai-factory';
+import { chatModel, embeddingModel } from './infrastructure/ai-factory';
 import { LiveChannelIdentityResolver } from './infrastructure/channel-identity.resolver';
 import { MetaCloudChannelGateway } from './channels/whatsapp/meta-cloud.gateway';
 import { TelegramChannelGateway } from './channels/telegram/telegram.gateway';
@@ -53,8 +53,8 @@ export function createBotContainer(db: DbExecutor, options: BotContainerOptions 
   const processor = () =>
     new BotProcessEventService({
       db,
-      chat: options.chat ?? geminiChat(),
-      embeddings: options.embeddings ?? geminiEmbeddings(),
+      chat: options.chat ?? chatModel(),
+      embeddings: options.embeddings ?? embeddingModel(),
       settingsRepository,
       channelRepository,
       gatewayFor: options.gatewayFor ?? gatewayFor,

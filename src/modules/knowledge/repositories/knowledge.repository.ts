@@ -34,6 +34,11 @@ export interface KnowledgeRepository {
   updateStatus(row: KnowledgeDocumentRow, status: KnowledgeDocumentStatus): Promise<void>;
   /** Forces a re-embed even when the content did not change (e.g. the model was switched). */
   markForReingest(row: KnowledgeDocumentRow): Promise<void>;
+  /**
+   * Queues every indexed document of every company whose vectors belong to another model.
+   * Returns how many were queued. Used by `pnpm knowledge:reindex` after a provider switch.
+   */
+  markStaleForReingest(embeddingModel: string): Promise<number>;
 
   /** `FOR UPDATE SKIP LOCKED`: several workers can drain the ingest backlog at once. */
   claimPendingIngest(limit: number): Promise<KnowledgeIngestJob[]>;
@@ -49,6 +54,18 @@ export interface KnowledgeRepository {
   ): Promise<void>;
   markIngestFailed(documentId: string, error: string): Promise<void>;
 
-  /** Nearest chunks of ACTIVE documents of this company, ordered by cosine distance. */
-  searchSimilar(companyId: string, embedding: number[], limit: number): Promise<KnowledgeMatch[]>;
+  /**
+   * Nearest chunks of ACTIVE documents of this company, ordered by cosine distance.
+   *
+   * `embeddingModel` is not a nicety: a cosine distance between vectors of two different models is
+   * a meaningless number that still sorts, so a document left over from the previous provider would
+   * surface as a confident match. Filtering them out makes a half-migrated base answer "no sé"
+   * instead of inventing, until `pnpm knowledge:reindex` finishes.
+   */
+  searchSimilar(
+    companyId: string,
+    embedding: number[],
+    limit: number,
+    embeddingModel: string,
+  ): Promise<KnowledgeMatch[]>;
 }

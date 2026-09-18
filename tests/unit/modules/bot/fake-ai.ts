@@ -6,10 +6,13 @@ import type { ChatModel, ChatRequest, ChatResult, EmbeddingModel } from '@/modul
  * share leading hash bytes, so cosine similarity is reproducible across runs without a network call.
  */
 export class FakeEmbeddingModel implements EmbeddingModel {
-  readonly model = 'fake-embedding';
   calls: string[][] = [];
 
-  constructor(readonly dimensions = 768) {}
+  constructor(
+    readonly dimensions = 768,
+    /** Named so a test can simulate the switch to another provider. */
+    readonly model = 'fake-embedding',
+  ) {}
 
   async embedDocuments(texts: string[]): Promise<number[][]> {
     this.calls.push(texts);
