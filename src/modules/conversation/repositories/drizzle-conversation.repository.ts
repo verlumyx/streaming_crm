@@ -161,23 +161,31 @@ export class DrizzleConversationRepository implements ConversationRepository {
 
   async appendMessage(input: AppendMessageInput): Promise<BotMessageRow> {
     const id = uuidv7();
-    await this.db.insert(botMessages).values({
-      id,
-      companyId: input.companyId,
-      conversationId: input.conversationId,
-      eventId: input.eventId,
-      role: input.role,
-      content: input.content,
-      toolName: input.toolName ?? null,
-      toolArgs: input.toolArgs ?? null,
-      toolResult: input.toolResult ?? null,
-      externalMessageId: input.externalMessageId ?? null,
-      status: input.status ?? 'sent',
-      error: input.error ?? null,
-      authorUserId: input.authorUserId ?? null,
-      tokenUsage: input.tokenUsage ?? null,
-      latencyMs: input.latencyMs ?? null,
-    });
+    const [created] = await this.db
+      .insert(botMessages)
+      .values({
+        id,
+        companyId: input.companyId,
+        conversationId: input.conversationId,
+        eventId: input.eventId,
+        role: input.role,
+        content: input.content,
+        toolName: input.toolName ?? null,
+        toolArgs: input.toolArgs ?? null,
+        toolResult: input.toolResult ?? null,
+        externalMessageId: input.externalMessageId ?? null,
+        status: input.status ?? 'sent',
+        error: input.error ?? null,
+        authorUserId: input.authorUserId ?? null,
+        tokenUsage: input.tokenUsage ?? null,
+        latencyMs: input.latencyMs ?? null,
+      })
+      // A retried event stores its inbound message again: the provider's message id makes the
+      // second write a no-op instead of breaking the retry on the unique index.
+      .onConflictDoNothing({ target: [botMessages.companyId, botMessages.externalMessageId] })
+      .returning();
+
+    if (!created) return this.findMessageByExternalId(input.companyId, input.externalMessageId!);
 
     const inbound = input.role === 'user';
     await this.db
@@ -189,8 +197,17 @@ export class DrizzleConversationRepository implements ConversationRepository {
       })
       .where(eq(botConversations.id, input.conversationId));
 
-    const [created] = await this.db.select().from(botMessages).where(eq(botMessages.id, id)).limit(1);
     return created;
+  }
+
+  private async findMessageByExternalId(companyId: string, externalMessageId: string): Promise<BotMessageRow> {
+    const [existing] = await this.db
+      .select()
+      .from(botMessages)
+      .where(and(eq(botMessages.companyId, companyId), eq(botMessages.externalMessageId, externalMessageId)))
+      .limit(1);
+
+    return existing;
   }
 
   async history(conversationId: string, limit: number): Promise<BotMessageRow[]> {

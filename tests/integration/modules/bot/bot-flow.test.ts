@@ -16,10 +16,19 @@ import { makeSaleContext } from '../../../helpers/sale-context';
 import { seedBotSettings, seedChannel, whatsappRequest, whatsappTextPayload } from '../../../helpers/bot-context';
 import { FakeChatModel, FakeEmbeddingModel, type ScriptedTurn } from '../../../unit/modules/bot/fake-ai';
 import { MetaCloudChannelGateway } from '@/modules/bot/channels/whatsapp/meta-cloud.gateway';
+import { AiUnavailableException } from '@/modules/bot/exceptions/ai-unavailable.exception';
+import type { ChatModel } from '@/modules/bot/infrastructure/ai-ports';
 import type { BotChannelRow } from '@/modules/bot/models/bot-channel.model';
 
 const params = (channelId: string) => ({ params: Promise.resolve({ channelId }) });
 const embeddings = new FakeEmbeddingModel();
+
+/** The quota is spent: every model of the chain refuses, exactly as the provider does. */
+const unavailable: ChatModel = {
+  generate: async () => {
+    throw new AiUnavailableException('El modelo no respondió: 429 RESOURCE_EXHAUSTED');
+  },
+};
 
 /** A gateway that records what the bot would send instead of calling Graph. */
 class RecordingGateway extends MetaCloudChannelGateway {
@@ -221,6 +230,35 @@ describe('El bot atiende un mensaje entrante', () => {
     expect(second).toMatchObject({ claimed: 1, answered: 1 });
     expect(sent).toHaveLength(1);
     expect(sent[0].text).toBe('Respuesta única.');
+  });
+
+  it('retries an event that failed at the model, without duplicating the inbound message', async () => {
+    const { channel } = await context([]);
+    const gateway = new RecordingGateway();
+    const sent = gateway.sent;
+
+    await deliver(channel, '¿Qué planes tienes?');
+    const first = await createBotContainer(db, {
+      chat: unavailable,
+      embeddings,
+      gatewayFor: () => gateway,
+    }).drainService(10);
+
+    expect(first).toMatchObject({ claimed: 1, failed: 1, answered: 0 });
+    expect(sent).toEqual([]);
+
+    // The inbound message is already stored, so the retry must not trip over its unique id.
+    const [failed] = await db.select().from(botEvents);
+    expect(failed.status).toBe('failed');
+    await createBotContainer(db).eventRepository.requeue(failed.id, failed.companyId);
+
+    const second = await drain(new FakeChatModel([{ text: 'Tenemos Netflix desde 10 USD.' }]), gateway);
+
+    expect(second).toMatchObject({ claimed: 1, answered: 1, failed: 0 });
+    expect(sent).toEqual([{ to: '584121234567', text: 'Tenemos Netflix desde 10 USD.' }]);
+    expect(await db.select().from(botMessages).where(eq(botMessages.role, 'user'))).toHaveLength(1);
+    const [conversation] = await db.select().from(botConversations);
+    expect(conversation.messageCount).toBe(2);
   });
 
   it('escalates instead of going quiet when the model loops on tools', async () => {
