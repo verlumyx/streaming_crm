@@ -23,6 +23,9 @@ export const BOT_ROLE_PERMISSIONS: readonly string[] = [
   SALE_PERMISSIONS.CREATE,
 ];
 
+/** `numeric(14, 4)`: the shape Postgres reads back, so the change detection compares like with like. */
+const asRateColumn = (rate: number | null) => (rate === null ? null : rate.toFixed(4));
+
 /** `users.email` is unique, which is what makes `ensureAgentIdentity` idempotent. */
 const agentEmail = (companyId: string) => `bot+${companyId}@bot.local`;
 
@@ -45,6 +48,10 @@ export class DrizzleBotSettingsRepository implements BotSettingsRepository {
   }
 
   async update(row: BotSettingsRow, command: UpdateBotSettingsCommand): Promise<void> {
+    // The timestamp is the rate's age, not the form's: re-saving the console must not rejuvenate it.
+    const exchangeRate = asRateColumn(command.exchangeRate);
+    const rateChanged = exchangeRate !== row.exchangeRate;
+
     await this.db
       .update(botSettings)
       .set({
@@ -52,6 +59,12 @@ export class DrizzleBotSettingsRepository implements BotSettingsRepository {
         assistantName: command.assistantName,
         personaPrompt: command.personaPrompt,
         paymentInstructions: command.paymentInstructions,
+        exchangeRate,
+        exchangeRateUpdatedAt: rateChanged
+          ? exchangeRate === null
+            ? null
+            : new Date()
+          : row.exchangeRateUpdatedAt,
         chatModel: command.chatModel,
         temperature: command.temperature.toFixed(2),
         maxToolIterations: command.maxToolIterations,

@@ -16,6 +16,7 @@ function updateCommand(companyId: string, overrides: Partial<UpdateBotSettingsCo
     assistantName: 'Vendedor',
     personaPrompt: 'Sé breve.',
     paymentInstructions: 'Paga al Pago Móvil 0102.',
+    exchangeRate: null as number | null,
     chatModel: 'gemini-flash-latest',
     temperature: 0.4,
     maxToolIterations: 4,
@@ -35,6 +36,7 @@ function updateCommand(companyId: string, overrides: Partial<UpdateBotSettingsCo
     base.assistantName,
     base.personaPrompt,
     base.paymentInstructions,
+    base.exchangeRate,
     base.chatModel,
     base.temperature,
     base.maxToolIterations,
@@ -114,6 +116,48 @@ describe('BotSettingsUpdateService', () => {
       autoCreateSale: false,
       contactDailyMessageLimit: 50,
     });
+  });
+
+  it('stamps the exchange rate the first time it is set', async () => {
+    const repository = new FakeBotSettingsRepository();
+    await new BotSetupService(repository).execute(COMPANY);
+
+    const updated = await new BotSettingsUpdateService(repository).execute(
+      updateCommand(COMPANY, { exchangeRate: 240.5 }),
+    );
+
+    expect(toBotSettingsDto(updated).exchangeRate).toBe(240.5);
+    expect(updated.exchangeRateUpdatedAt).toBeInstanceOf(Date);
+  });
+
+  it('does not rejuvenate the rate when the console is saved with the same value', async () => {
+    const repository = new FakeBotSettingsRepository();
+    const service = new BotSettingsUpdateService(repository);
+    await new BotSetupService(repository).execute(COMPANY);
+
+    const first = await service.execute(updateCommand(COMPANY, { exchangeRate: 240.5 }));
+    // Anything else changing must not pass a stale rate off as today's.
+    const second = await service.execute(updateCommand(COMPANY, { exchangeRate: 240.5, assistantName: 'Otro' }));
+
+    expect(second.exchangeRateUpdatedAt).toEqual(first.exchangeRateUpdatedAt);
+    expect(second.assistantName).toBe('Otro');
+  });
+
+  it('re-stamps the rate when it actually changes, and clears the stamp when it is removed', async () => {
+    const repository = new FakeBotSettingsRepository();
+    const service = new BotSettingsUpdateService(repository);
+    await new BotSetupService(repository).execute(COMPANY);
+
+    const first = await service.execute(updateCommand(COMPANY, { exchangeRate: 240.5 }));
+    const changed = await service.execute(updateCommand(COMPANY, { exchangeRate: 250 }));
+    const cleared = await service.execute(updateCommand(COMPANY, { exchangeRate: null }));
+
+    expect(changed.exchangeRateUpdatedAt?.getTime()).toBeGreaterThanOrEqual(
+      first.exchangeRateUpdatedAt!.getTime(),
+    );
+    expect(changed.exchangeRate).toBe('250.0000');
+    expect(cleared.exchangeRate).toBeNull();
+    expect(cleared.exchangeRateUpdatedAt).toBeNull();
   });
 
   it('fails when the company has no settings yet', async () => {

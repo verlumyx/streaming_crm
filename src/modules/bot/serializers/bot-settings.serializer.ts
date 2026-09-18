@@ -6,6 +6,8 @@ export type BotSettingsDto = {
   assistantName: string;
   personaPrompt: string | null;
   paymentInstructions: string | null;
+  exchangeRate: number | null;
+  exchangeRateUpdatedAt: string | null;
   chatModel: string;
   embeddingModel: string;
   embeddingDimensions: number;
@@ -29,6 +31,8 @@ export function toBotSettingsDto(row: BotSettingsRow): BotSettingsDto {
     assistantName: row.assistantName,
     personaPrompt: row.personaPrompt,
     paymentInstructions: row.paymentInstructions,
+    exchangeRate: row.exchangeRate === null ? null : Number(row.exchangeRate),
+    exchangeRateUpdatedAt: row.exchangeRateUpdatedAt?.toISOString() ?? null,
     chatModel: row.chatModel,
     embeddingModel: row.embeddingModel,
     embeddingDimensions: row.embeddingDimensions,

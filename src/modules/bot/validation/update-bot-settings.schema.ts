@@ -8,6 +8,19 @@ const checkbox = z
   .optional()
   .transform((v) => v === 'on' || v === 'true' || v === '1');
 
+/** Optional positive money-ish number from a form: `''` / missing → `null`. */
+const optionalRate = (label: string, max: number) =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? v.replace(',', '.') : null))
+    .refine((v) => v === null || (Number.isFinite(Number(v)) && Number(v) > 0), {
+      message: `${label} debe ser un número mayor que 0.`,
+    })
+    .refine((v) => v === null || Number(v) <= max, { message: `${label} no puede ser mayor que ${max}.` })
+    .transform((v) => (v === null ? null : Number(v)));
+
 const boundedNumber = (label: string, min: number, max: number) =>
   z.coerce
     .number({ message: `${label} debe ser un número.` })
@@ -19,6 +32,7 @@ export const updateBotSettingsSchema = z.object({
   assistantName: requiredText('El nombre del asistente', 100),
   personaPrompt: optionalText('Las instrucciones del negocio', 4000),
   paymentInstructions: optionalText('Las instrucciones de pago', 2000),
+  exchangeRate: optionalRate('La tasa de cambio', 9_999_999_999),
   chatModel: requiredText('El modelo de chat', 60),
   temperature: boundedNumber('La temperatura', 0, 2),
   maxToolIterations: boundedNumber('El máximo de iteraciones', 1, 12),

@@ -8,6 +8,7 @@ import type { InboundMessage } from '../channels/channel-gateway';
 import { ChannelSendError } from '../channels/whatsapp/meta-cloud.gateway';
 import { chunkMessage } from '../domain/message-chunking';
 import { OUT_OF_SERVICE_MESSAGE } from '../domain/service-notice';
+import { resolveExchangeRate, usableExchangeRate } from '../domain/exchange-rate';
 import { buildSystemPrompt } from '../domain/system-prompt';
 import { isFinalAttempt, type BotEventRow } from '../models/bot-event.model';
 import type { BotMessageRow } from '@/modules/conversation/models/conversation.model';
@@ -80,6 +81,7 @@ export class BotProcessEventService {
 
     const startedAt = Date.now();
     const tools = buildToolRegistry(settings);
+    const exchangeRate = resolveExchangeRate(settings, new Date());
     const context: ToolContext = {
       db: this.deps.db,
       embeddings: this.deps.embeddings,
@@ -90,6 +92,7 @@ export class BotProcessEventService {
       clientId: contact.clientId,
       contactPhoneE164: contact.phoneE164,
       settings,
+      exchangeRate: usableExchangeRate(exchangeRate),
       today: todayIsoDate(),
     };
 
@@ -120,6 +123,7 @@ export class BotProcessEventService {
           today: context.today,
           personaPrompt: settings.personaPrompt,
           paymentInstructions: settings.paymentInstructions,
+          exchangeRate,
           contact: { displayName: contact.displayName, phoneE164: contact.phoneE164 },
           client: client ? { code: client.code, name: client.name } : null,
           autoCreateSale: settings.autoCreateSale,

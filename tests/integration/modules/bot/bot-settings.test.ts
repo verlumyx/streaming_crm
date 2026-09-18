@@ -18,6 +18,7 @@ const SETTINGS_FORM = {
   assistantName: 'Sofía',
   personaPrompt: 'Trata de tú y ofrece primero el plan mensual.',
   paymentInstructions: 'Pago Móvil 0102 — 0412 1234567.',
+  exchangeRate: '240,50',
   chatModel: 'gemini-flash-latest',
   temperature: '0.4',
   maxToolIterations: '4',
@@ -169,7 +170,53 @@ describe('Configurar el asistente', () => {
       // An unchecked switch submits an empty string, which must read as false.
       autoCreateSale: false,
       contactDailyMessageLimit: 50,
+      // Typed with the decimal comma the console shows.
+      exchangeRate: '240.5000',
     });
+    expect(settings.exchangeRateUpdatedAt).toBeInstanceOf(Date);
+  });
+
+  it('only re-stamps the rate when its value changes', async () => {
+    const { company } = await setup();
+    const save = (form: Record<string, string>) =>
+      expectRedirect(
+        updateBotSettingsAction(company.id, initialActionState, formData(form)),
+        `/${company.id}/bot/settings`,
+      );
+    const read = async () => (await db.select().from(botSettings).where(eq(botSettings.companyId, company.id)))[0];
+
+    await save(SETTINGS_FORM);
+    const first = await read();
+
+    await save({ ...SETTINGS_FORM, assistantName: 'Otro nombre' });
+    const untouched = await read();
+    expect(untouched.exchangeRateUpdatedAt).toEqual(first.exchangeRateUpdatedAt);
+
+    await save({ ...SETTINGS_FORM, exchangeRate: '250' });
+    const restamped = await read();
+    expect(restamped.exchangeRate).toBe('250.0000');
+    expect(restamped.exchangeRateUpdatedAt!.getTime()).toBeGreaterThanOrEqual(
+      first.exchangeRateUpdatedAt!.getTime(),
+    );
+
+    await save({ ...SETTINGS_FORM, exchangeRate: '' });
+    const cleared = await read();
+    expect(cleared.exchangeRate).toBeNull();
+    expect(cleared.exchangeRateUpdatedAt).toBeNull();
+  });
+
+  it('rejects a rate that is not a positive number', async () => {
+    const { company } = await setup();
+
+    for (const exchangeRate of ['abc', '0', '-3']) {
+      const state = await updateBotSettingsAction(
+        company.id,
+        initialActionState,
+        formData({ ...SETTINGS_FORM, exchangeRate }),
+      );
+      expect(state.status, exchangeRate).toBe('error');
+      expect(state.fieldErrors?.exchangeRate, exchangeRate).toBeDefined();
+    }
   });
 
   it('keeps the agent user when the configuration changes', async () => {

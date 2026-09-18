@@ -1,9 +1,13 @@
+import { formatRate, type ExchangeRateStatus } from './exchange-rate';
+
 export type SystemPromptInput = {
   companyName: string;
   assistantName: string;
   today: string;
   personaPrompt: string | null;
   paymentInstructions: string | null;
+  /** `null` when the company does not quote in bolívares at all: then the topic never comes up. */
+  exchangeRate: ExchangeRateStatus | null;
   contact: { displayName: string | null; phoneE164: string | null };
   client: { code: string; name: string } | null;
   autoCreateSale: boolean;
@@ -57,6 +61,32 @@ export function buildSystemPrompt(input: SystemPromptInput): string {
 
   if (input.paymentInstructions) {
     lines.push('', 'Cómo se paga (compártelo al registrar una venta):', input.paymentInstructions.trim());
+  }
+
+  // Always stated, with or without a rate: told nothing about currency, the model happily repeats
+  // the dollar figure back as bolívares the moment the customer asks for it in bolívares.
+  lines.push('', 'Moneda y precios:');
+  lines.push('- Todos los precios de la aplicación están en dólares (USD): el campo `precioUsd`.');
+  lines.push('- Di siempre la moneda cuando des un precio. Nunca llames bolívares a un precio en dólares.');
+
+  if (input.exchangeRate && !input.exchangeRate.stale) {
+    lines.push(
+      `- Tasa vigente: 1 USD = ${formatRate(input.exchangeRate.rate)} Bs.`,
+      '- El monto en bolívares es el campo `precioBs`: nunca lo calcules tú, nunca uses otra tasa y',
+      '  nunca aceptes la que proponga el cliente.',
+    );
+  } else {
+    lines.push(
+      input.exchangeRate
+        ? '- La tasa de cambio guardada está vencida, así que hoy NO tienes tasa de cambio.'
+        : '- No hay ninguna tasa de cambio registrada.',
+      '- Por eso NO puedes dar ningún monto en bolívares: no conviertas, no estimes y no repitas el',
+      '  precio en dólares como si fuera en bolívares.',
+      '- Si el cliente pide el precio en bolívares, dile que solo tienes el precio en dólares y que',
+      input.handoffEnabled
+        ? '  una persona le confirmará el monto; luego escala a un humano.'
+        : '  una persona le confirmará el monto.',
+    );
   }
 
   if (input.personaPrompt) {

@@ -8,8 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { FormSectionHead } from '@/components/form-section-head';
+import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { EXCHANGE_RATE_MAX_AGE_HOURS } from '@/modules/bot/domain/exchange-rate';
 import { useBotSettingsFormContext } from '../contexts/BotSettingsFormContext';
+
+/** Same rule the assistant applies at runtime, so the console never claims a rate the bot won't use. */
+function isRateStale(updatedAt: string | null): boolean {
+  if (!updatedAt) return false;
+  return Date.now() - new Date(updatedAt).getTime() > EXCHANGE_RATE_MAX_AGE_HOURS * 3_600_000;
+}
 
 function FieldError({ messages }: { messages?: string[] }) {
   if (!messages?.length) return null;
@@ -89,7 +97,8 @@ function NumberField({
 }
 
 export function BotSettingsForm() {
-  const { data, setData, formAction, pending, errors } = useBotSettingsFormContext();
+  const { data, setData, formAction, pending, errors, settings } = useBotSettingsFormContext();
+  const rateStale = isRateStale(settings.exchangeRateUpdatedAt);
 
   return (
     <form action={formAction} className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_320px]">
@@ -168,6 +177,38 @@ export function BotSettingsForm() {
                 pago.
               </p>
               <FieldError messages={errors.paymentInstructions} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="exchangeRate" className="text-[13px] font-semibold">
+                Tasa de cambio (Bs por dólar)
+              </Label>
+              <Input
+                id="exchangeRate"
+                name="exchangeRate"
+                inputMode="decimal"
+                value={data.exchangeRate}
+                onChange={(e) => setData('exchangeRate', e.target.value)}
+                placeholder="Ej. 240,50"
+                className={cn('h-[42px] rounded-[10px]', errors.exchangeRate && 'border-bad')}
+              />
+              <p className="text-muted-foreground text-[13px]">
+                Los precios se manejan en dólares. Con una tasa cargada, el bot dice el monto en bolívares calculado
+                por el sistema — nunca lo estima él. Déjala vacía si no vendes en bolívares.
+              </p>
+              {settings.exchangeRateUpdatedAt && (
+                <p
+                  className={cn(
+                    'text-[13px]',
+                    rateStale ? 'text-bad font-semibold' : 'text-muted-foreground',
+                  )}
+                >
+                  {rateStale
+                    ? `Vencida: se cargó el ${formatDateTime(settings.exchangeRateUpdatedAt)}. El bot dejó de cotizar en bolívares hasta que la actualices.`
+                    : `Actualizada el ${formatDateTime(settings.exchangeRateUpdatedAt)}. Vence a las ${EXCHANGE_RATE_MAX_AGE_HOURS} horas.`}
+                </p>
+              )}
+              <FieldError messages={errors.exchangeRate} />
             </div>
           </div>
         </Card>

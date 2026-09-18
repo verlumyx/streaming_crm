@@ -50,6 +50,13 @@
       "when": 1789658664473,
       "tag": "0006_client_phone_e164_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789750758048,
+      "tag": "0007_bot_exchange_rate",
+      "breakpoints": true
     }
   ]
 }

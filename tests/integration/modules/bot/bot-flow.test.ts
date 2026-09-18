@@ -163,6 +163,82 @@ describe('El bot atiende un mensaje entrante', () => {
     expect(new Set(pivots.map((p) => p.profileId)).size).toBe(4);
   });
 
+  it('prices in bolívares from the stored rate, without the model doing the arithmetic', async () => {
+    const { sale, channel } = await context([]);
+    await seedBotSettings(db, sale.company.id, {
+      status: 'active',
+      exchangeRate: '240.5000',
+      exchangeRateUpdatedAt: new Date(),
+    });
+    const chat = new FakeChatModel([
+      { functionCalls: [{ name: 'listar_catalogo', args: {} }] },
+      { text: 'El plan cuesta 10 USD, es decir 2.405,00 Bs a la tasa de hoy.' },
+    ]);
+    const gateway = new RecordingGateway();
+
+    await deliver(channel, '¿Cuánto cuesta en bolívares?');
+    await drain(chat, gateway);
+
+    const [catalog] = await db.select().from(botMessages).where(eq(botMessages.toolName, 'listar_catalogo'));
+    const planes = (catalog.toolResult as { planes: { precioUsd: number; precioBs: number }[] }).planes;
+    const plan = planes.find((p) => p.precioUsd === Number(sale.plan.salePrice))!;
+    expect(plan.precioBs).toBeCloseTo(Number(sale.plan.salePrice) * 240.5, 2);
+
+    // And the rate is stated in the system prompt, so the model can quote it without inventing one.
+    expect(chat.requests[0].system).toContain('1 USD = 240,50 Bs');
+  });
+
+  it('never relabels the dollar price as bolívares when no rate is registered', async () => {
+    const { sale, channel } = await context([]);
+    const chat = new FakeChatModel([
+      { functionCalls: [{ name: 'listar_catalogo', args: {} }] },
+      { text: 'El plan cuesta 5,40 USD. El monto en bolívares te lo confirma un compañero.' },
+    ]);
+    const gateway = new RecordingGateway();
+
+    await deliver(channel, '¿Cuánto cuesta en Bs?');
+    await drain(chat, gateway);
+
+    const [catalog] = await db.select().from(botMessages).where(eq(botMessages.toolName, 'listar_catalogo'));
+    const planes = (catalog.toolResult as { planes: Record<string, unknown>[] }).planes;
+    // The unit travels with the datum, so the figure cannot be read as bolívares.
+    for (const plan of planes) {
+      expect(plan).toHaveProperty('precioUsd');
+      expect(plan).not.toHaveProperty('precioBs');
+    }
+    expect(sale.company.id).toBeTruthy();
+
+    const system = chat.requests[0].system;
+    expect(system).toContain('están en dólares (USD)');
+    expect(system).toContain('No hay ninguna tasa de cambio registrada.');
+    expect(system).toMatch(/NO puedes dar ning[úu]n monto en bol[íi]vares/);
+  });
+
+  it('stops quoting in bolívares once the stored rate goes stale', async () => {
+    const { sale, channel } = await context([]);
+    await seedBotSettings(db, sale.company.id, {
+      status: 'active',
+      exchangeRate: '240.5000',
+      exchangeRateUpdatedAt: new Date(Date.now() - 48 * 3_600_000),
+    });
+    const chat = new FakeChatModel([
+      { functionCalls: [{ name: 'listar_catalogo', args: {} }] },
+      { text: 'El plan cuesta 10 USD; el monto en bolívares te lo confirma un compañero.' },
+    ]);
+    const gateway = new RecordingGateway();
+
+    await deliver(channel, '¿Cuánto cuesta en bolívares?');
+    await drain(chat, gateway);
+
+    const [catalog] = await db.select().from(botMessages).where(eq(botMessages.toolName, 'listar_catalogo'));
+    const planes = (catalog.toolResult as { planes: Record<string, unknown>[] }).planes;
+    for (const plan of planes) expect(plan).not.toHaveProperty('precioBs');
+
+    // The stale number never reaches the model: it would be repeated as if it were today's.
+    expect(chat.requests[0].system).not.toContain('240,50');
+    expect(chat.requests[0].system).toMatch(/vencida/i);
+  });
+
   it('stays silent while a human has the conversation', async () => {
     const { channel, chat } = await context([{ text: 'No debería responder.' }]);
     const gateway = new RecordingGateway();

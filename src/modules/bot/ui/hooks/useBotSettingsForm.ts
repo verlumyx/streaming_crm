@@ -11,6 +11,8 @@ export type BotSettingsFormData = {
   assistantName: string;
   personaPrompt: string;
   paymentInstructions: string;
+  /** Kept as text so an empty field means "no rate" instead of 0. */
+  exchangeRate: string;
   chatModel: string;
   temperature: number;
   maxToolIterations: number;
@@ -30,6 +32,7 @@ export function useBotSettingsForm(companyId: string, settings: BotSettingsDto) 
     assistantName: settings.assistantName,
     personaPrompt: settings.personaPrompt ?? '',
     paymentInstructions: settings.paymentInstructions ?? '',
+    exchangeRate: settings.exchangeRate === null ? '' : String(settings.exchangeRate),
     chatModel: settings.chatModel,
     temperature: settings.temperature,
     maxToolIterations: settings.maxToolIterations,

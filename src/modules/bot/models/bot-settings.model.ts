@@ -33,6 +33,13 @@ export const botSettings = pgTable(
     personaPrompt: text('persona_prompt'),
     /** What the bot replies once the sale is registered and waiting for payment verification. */
     paymentInstructions: text('payment_instructions'),
+    /**
+     * Bolívares per dollar. Null = the company does not quote in bolívares and the bot must never
+     * mention a rate. A rate older than `EXCHANGE_RATE_MAX_AGE_HOURS` stops being usable.
+     */
+    exchangeRate: numeric('exchange_rate', { precision: 14, scale: 4 }),
+    /** Bumped by the repository only when the rate actually changes, so its age is truthful. */
+    exchangeRateUpdatedAt: timestamp('exchange_rate_updated_at', { withTimezone: true }),
     locale: varchar('locale', { length: 10 }).notNull().default('es'),
     chatModel: varchar('chat_model', { length: 60 }).notNull().default(DEFAULT_CHAT_MODEL),
     embeddingModel: varchar('embedding_model', { length: 60 }).notNull().default(DEFAULT_EMBEDDING_MODEL),
@@ -60,6 +67,7 @@ export const botSettings = pgTable(
     check('app_bot_settings_retrieval_top_k_check', sql`${t.retrievalTopK} between 1 and 20`),
     check('app_bot_settings_retrieval_min_score_check', sql`${t.retrievalMinScore} >= 0 and ${t.retrievalMinScore} <= 1`),
     check('app_bot_settings_history_window_check', sql`${t.historyWindow} between 2 and 100`),
+    check('app_bot_settings_exchange_rate_check', sql`${t.exchangeRate} is null or ${t.exchangeRate} > 0`),
   ],
 );
 

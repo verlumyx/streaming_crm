@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createSaleContainer } from '@/modules/sale/container';
+import { toBolivares } from '../domain/exchange-rate';
 import type { BotTool } from './bot-tool';
 
 const catalogSchema = z.object({
@@ -12,12 +13,15 @@ const matches = (haystack: string, needle: string) =>
 /**
  * The sellable catalogue as the customer should see it: plan, duration and sale price.
  * Deliberately never exposes `cost` or `roiTargetPct` — the bot must not be able to leak margins.
+ *
+ * `precioBs` is the same price converted here at the company's rate; it is absent when there is no
+ * usable rate, and then the model has nothing to quote in bolívares with.
  */
 export const listarCatalogoTool: BotTool<typeof catalogSchema> = {
   name: 'listar_catalogo',
   description:
     'Lista los planes que la empresa vende: plataforma, nombre del plan, si es un perfil o la cuenta completa, ' +
-    'duración en días y precio. Úsala siempre que hablen de precios, planes o plataformas.',
+    'duración en días y precio en dólares. Úsala siempre que hablen de precios, planes o plataformas.',
   schema: catalogSchema,
   mutating: false,
 
@@ -26,14 +30,20 @@ export const listarCatalogoTool: BotTool<typeof catalogSchema> = {
     const filtered = servicio ? plans.filter((plan) => matches(plan.serviceName, servicio)) : plans;
 
     return {
-      planes: filtered.map((plan) => ({
-        planCodigo: plan.code,
-        servicio: plan.serviceName,
-        nombre: plan.name,
-        capacidad: plan.capacity === 'full_account' ? 'cuenta completa' : 'un perfil',
-        duracionDias: plan.durationDays,
-        precio: Number(plan.salePrice),
-      })),
+      planes: filtered.map((plan) => {
+        const precioUsd = Number(plan.salePrice);
+        const precioBs = toBolivares(precioUsd, context.exchangeRate);
+
+        return {
+          planCodigo: plan.code,
+          servicio: plan.serviceName,
+          nombre: plan.name,
+          capacidad: plan.capacity === 'full_account' ? 'cuenta completa' : 'un perfil',
+          duracionDias: plan.durationDays,
+          precioUsd,
+          ...(precioBs === null ? {} : { precioBs }),
+        };
+      }),
     };
   },
 };

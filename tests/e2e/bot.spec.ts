@@ -21,6 +21,7 @@ test('prepare the assistant and tune its configuration', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/${companyId}/bot/settings$`));
   await page.locator('#assistantName').fill(name);
   await page.locator('#paymentInstructions').fill('Pago Móvil 0102 — 0412 1234567.');
+  await page.locator('#exchangeRate').fill('240,50');
   await page.locator('#retrievalTopK').fill('7');
 
   const enabled = page.locator('#enabled');
@@ -30,6 +31,9 @@ test('prepare the assistant and tune its configuration', async ({ page }) => {
   await expect(page.getByText('Configuración del asistente guardada.')).toBeVisible();
   await expect(page.locator('#assistantName')).toHaveValue(name);
   await expect(page.locator('#retrievalTopK')).toHaveValue('7');
+  // The rate round-trips as a number and the console says when it was loaded.
+  await expect(page.locator('#exchangeRate')).toHaveValue('240.5');
+  await expect(page.getByText(/Actualizada el .*Vence a las 24 horas/)).toBeVisible();
 
   await page.goto(`/${companyId}/bot`);
   await expect(page.getByRole('heading', { name: 'Bot IA' })).toBeVisible();

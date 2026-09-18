@@ -8,6 +8,8 @@ export class UpdateBotSettingsCommand {
     readonly assistantName: string,
     readonly personaPrompt: string | null,
     readonly paymentInstructions: string | null,
+    /** Bolívares per dollar, or `null` when the company does not quote in bolívares. */
+    readonly exchangeRate: number | null,
     readonly chatModel: string,
     readonly temperature: number,
     readonly maxToolIterations: number,
@@ -28,6 +30,7 @@ export class UpdateBotSettingsCommand {
       input.assistantName,
       input.personaPrompt,
       input.paymentInstructions,
+      input.exchangeRate,
       input.chatModel,
       input.temperature,
       input.maxToolIterations,

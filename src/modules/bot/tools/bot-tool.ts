@@ -22,6 +22,12 @@ export type ToolContext = {
   clientId: string | null;
   contactPhoneE164: string | null;
   settings: BotSettingsRow;
+  /**
+   * Bolívares per dollar the turn may price with, or `null` when there is none or the stored one
+   * went stale. Resolved once per turn so every tool quotes the same rate, and so the model never
+   * has to multiply: the bolívar amounts it says come from here, like every other number.
+   */
+  exchangeRate: number | null;
   today: string;
 };
 

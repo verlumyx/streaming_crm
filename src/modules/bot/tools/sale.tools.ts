@@ -4,6 +4,7 @@ import { CreateSaleCommand } from '@/modules/sale/commands/create-sale.command';
 import { SearchSaleCommand } from '@/modules/sale/commands/search-sale.command';
 import { DomainError } from '@/modules/shared/exceptions/domain-error';
 import { uuidv7 } from '@/modules/shared/uuid';
+import { toBolivares } from '../domain/exchange-rate';
 import type { SaleAvailableProfile } from '@/modules/sale/repositories/sale.repository';
 import type { BotTool } from './bot-tool';
 
@@ -62,11 +63,15 @@ export const crearVentaTool: BotTool<typeof createSchema> = {
         ),
       );
 
+      const precioUsd = Number(sale.price);
+      const precioBs = toBolivares(precioUsd, context.exchangeRate);
+
       return {
         codigoVenta: sale.code,
         servicio: plan.serviceName,
         plan: plan.name,
-        precio: Number(sale.price),
+        precioUsd,
+        ...(precioBs === null ? {} : { precioBs }),
         inicio: sale.startDate,
         fin: sale.endDate,
         estado: 'por aprobar',
@@ -127,7 +132,7 @@ export const consultarMisVentasTool: BotTool<typeof listSchema> = {
         servicio: sale.service?.name ?? null,
         estado: sale.status,
         vence: sale.endDate,
-        precio: Number(sale.price),
+        precioUsd: Number(sale.price),
       })),
     };
   },

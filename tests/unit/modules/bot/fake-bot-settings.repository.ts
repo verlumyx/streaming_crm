@@ -35,6 +35,8 @@ export class FakeBotSettingsRepository implements BotSettingsRepository {
       assistantName: 'Asistente',
       personaPrompt: null,
       paymentInstructions: null,
+      exchangeRate: null,
+      exchangeRateUpdatedAt: null,
       locale: 'es',
       chatModel: DEFAULT_CHAT_MODEL,
       embeddingModel: DEFAULT_EMBEDDING_MODEL,
@@ -56,12 +58,22 @@ export class FakeBotSettingsRepository implements BotSettingsRepository {
 
   async update(row: BotSettingsRow, command: UpdateBotSettingsCommand): Promise<void> {
     const index = this.rows.findIndex((r) => r.id === row.id);
+    // Mirrors the Drizzle repository: the rate's timestamp only moves when the rate itself does.
+    const exchangeRate = command.exchangeRate === null ? null : command.exchangeRate.toFixed(4);
+    const rateChanged = exchangeRate !== row.exchangeRate;
+
     this.rows[index] = {
       ...this.rows[index],
       status: command.status,
       assistantName: command.assistantName,
       personaPrompt: command.personaPrompt,
       paymentInstructions: command.paymentInstructions,
+      exchangeRate,
+      exchangeRateUpdatedAt: rateChanged
+        ? exchangeRate === null
+          ? null
+          : new Date()
+        : row.exchangeRateUpdatedAt,
       chatModel: command.chatModel,
       temperature: command.temperature.toFixed(2),
       maxToolIterations: command.maxToolIterations,
