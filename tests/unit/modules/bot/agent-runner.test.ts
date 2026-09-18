@@ -80,6 +80,35 @@ describe('BotAgentRunner', () => {
     expect(secondTurn.at(-1)?.parts[0]).toMatchObject({ kind: 'functionResponse', name: 'eco' });
   });
 
+  it('replays the call with the thought signature the model attached to it', async () => {
+    const chat = new FakeChatModel([
+      { functionCalls: [{ name: 'eco', args: { valor: 'Netflix' }, thoughtSignature: 'firma-abc' }] },
+      { text: 'Netflix cuesta 3 USD.' },
+    ]);
+
+    await run(chat, [echoTool]);
+
+    // Gemini rejects the whole request when a replayed call comes back unsigned.
+    expect(chat.requests[1].contents.at(-2)?.parts[0]).toMatchObject({
+      kind: 'functionCall',
+      name: 'eco',
+      thoughtSignature: 'firma-abc',
+    });
+  });
+
+  it('keeps talking to the model that actually answered', async () => {
+    const chat = new FakeChatModel([
+      { functionCalls: [{ name: 'eco', args: { valor: 'x' } }], model: 'modelo-de-respaldo' },
+      { text: 'listo' },
+    ]);
+
+    const outcome = await run(chat, [echoTool]);
+
+    // The signatures of the fallback model are only valid for it, so the loop must not go back.
+    expect(chat.requests.map((request) => request.model)).toEqual(['fake', 'modelo-de-respaldo']);
+    expect(outcome.model).toBe('modelo-de-respaldo');
+  });
+
   it('stops after `maxIterations` when the model never answers', async () => {
     const chat = new FakeChatModel(
       Array.from({ length: 10 }, () => ({ functionCalls: [{ name: 'eco', args: { valor: 'x' } }] })),

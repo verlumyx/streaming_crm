@@ -35,7 +35,7 @@ export class FakeEmbeddingModel implements EmbeddingModel {
   }
 }
 
-export type ScriptedTurn = Partial<Pick<ChatResult, 'text' | 'functionCalls'>>;
+export type ScriptedTurn = Partial<Pick<ChatResult, 'text' | 'functionCalls' | 'model'>>;
 
 /** Replays a scripted conversation so the agent loop can be tested turn by turn. */
 export class FakeChatModel implements ChatModel {
@@ -52,7 +52,8 @@ export class FakeChatModel implements ChatModel {
       text: turn.text ?? null,
       functionCalls: turn.functionCalls ?? [],
       usage: { promptTokens: 10, candidatesTokens: 5, totalTokens: 15 },
-      model: request.model,
+      // A scripted model stands for the fallback chain answering with something else.
+      model: turn.model ?? request.model,
     };
   }
 }

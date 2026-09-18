@@ -43,7 +43,8 @@ export class BotAgentRunner {
         system: input.system,
         contents,
         tools: declarations,
-        model: input.model,
+        // Whoever answered first keeps the conversation: its thought signatures are only valid for it.
+        model,
         temperature: input.temperature,
       });
 
@@ -60,6 +61,8 @@ export class BotAgentRunner {
           kind: 'functionCall' as const,
           name: call.name,
           args: call.args,
+          // The provider demands its own signature back with the replayed call.
+          thoughtSignature: call.thoughtSignature,
         })),
       });
 

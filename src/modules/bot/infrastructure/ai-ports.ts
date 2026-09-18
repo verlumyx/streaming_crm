@@ -7,8 +7,19 @@ export type ChatRole = 'user' | 'model' | 'tool';
 
 export type ChatPart =
   | { kind: 'text'; text: string }
-  | { kind: 'functionCall'; name: string; args: Record<string, unknown> }
+  | ({ kind: 'functionCall' } & ChatFunctionCall)
   | { kind: 'functionResponse'; name: string; response: Record<string, unknown> };
+
+export type ChatFunctionCall = {
+  name: string;
+  args: Record<string, unknown>;
+  /**
+   * Opaque token the provider attaches to a call and demands back when the call is replayed in the
+   * next request. Carried through untouched: it is meaningless to us and only valid for the model
+   * that issued it.
+   */
+  thoughtSignature?: string;
+};
 
 export type ChatTurn = { role: ChatRole; parts: ChatPart[] };
 
@@ -35,7 +46,7 @@ export type ChatRequest = {
 
 export type ChatResult = {
   text: string | null;
-  functionCalls: { name: string; args: Record<string, unknown> }[];
+  functionCalls: ChatFunctionCall[];
   usage: TokenUsage | null;
   /** Which model of the fallback chain actually answered. */
   model: string;

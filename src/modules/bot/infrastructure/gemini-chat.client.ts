@@ -1,6 +1,14 @@
 import 'server-only';
 import { GoogleGenAI } from '@google/genai';
-import type { ChatModel, ChatPart, ChatRequest, ChatResult, ChatTurn } from './ai-ports';
+import type { Part } from '@google/genai';
+import type {
+  ChatFunctionCall,
+  ChatModel,
+  ChatPart,
+  ChatRequest,
+  ChatResult,
+  ChatTurn,
+} from './ai-ports';
 import { AiUnavailableException } from '../exceptions/ai-unavailable.exception';
 
 /**
@@ -25,9 +33,12 @@ export class GeminiChatModel implements ChatModel {
 
     for (const model of models) {
       try {
+        // A thought signature only means something to the model that issued it, so a fallback
+        // model gets the conversation without them.
+        const keepSignatures = model === request.model;
         const response = await this.client.models.generateContent({
           model,
-          contents: request.contents.map(toGeminiContent),
+          contents: request.contents.map((turn) => toGeminiContent(turn, keepSignatures)),
           config: {
             systemInstruction: request.system,
             temperature: request.temperature,
@@ -39,18 +50,14 @@ export class GeminiChatModel implements ChatModel {
 
         const parts = response.candidates?.[0]?.content?.parts ?? [];
         const text = parts
+          .filter((part) => part.thought !== true)
           .map((part) => part.text ?? '')
           .join('')
           .trim();
 
         return {
           text: text === '' ? null : text,
-          functionCalls: parts
-            .filter((part) => part.functionCall?.name)
-            .map((part) => ({
-              name: part.functionCall!.name!,
-              args: (part.functionCall!.args ?? {}) as Record<string, unknown>,
-            })),
+          functionCalls: toFunctionCalls(parts),
           usage: response.usageMetadata
             ? {
                 promptTokens: response.usageMetadata.promptTokenCount ?? 0,
@@ -71,13 +78,39 @@ export class GeminiChatModel implements ChatModel {
   }
 }
 
-function toGeminiContent(turn: ChatTurn) {
-  return { role: turn.role === 'tool' ? 'user' : turn.role, parts: turn.parts.map(toGeminiPart) };
+/**
+ * Gemini hands every function call a `thoughtSignature` and rejects the whole request
+ * (INVALID_ARGUMENT) when the call is replayed without it. Gemini 3 signs each call; 2.5 only signs
+ * the first part of the turn, which may be the thought or the text preceding the calls, so that one
+ * is reused for the first call when it came unsigned.
+ */
+function toFunctionCalls(parts: Part[]): ChatFunctionCall[] {
+  const turnSignature = parts.find((part) => part.thoughtSignature)?.thoughtSignature;
+
+  return parts
+    .filter((part) => part.functionCall?.name)
+    .map((part, index) => ({
+      name: part.functionCall!.name!,
+      args: (part.functionCall!.args ?? {}) as Record<string, unknown>,
+      thoughtSignature: part.thoughtSignature ?? (index === 0 ? turnSignature : undefined),
+    }));
 }
 
-function toGeminiPart(part: ChatPart) {
+function toGeminiContent(turn: ChatTurn, keepSignatures: boolean) {
+  return {
+    role: turn.role === 'tool' ? 'user' : turn.role,
+    parts: turn.parts.map((part) => toGeminiPart(part, keepSignatures)),
+  };
+}
+
+function toGeminiPart(part: ChatPart, keepSignatures: boolean): Part {
   if (part.kind === 'text') return { text: part.text };
-  if (part.kind === 'functionCall') return { functionCall: { name: part.name, args: part.args } };
+  if (part.kind === 'functionCall') {
+    return {
+      functionCall: { name: part.name, args: part.args },
+      ...(keepSignatures && part.thoughtSignature ? { thoughtSignature: part.thoughtSignature } : {}),
+    };
+  }
   return { functionResponse: { name: part.name, response: part.response } };
 }
 
