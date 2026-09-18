@@ -38,43 +38,14 @@ export interface BotTool<S extends z.ZodType = z.ZodType> {
 }
 
 /**
- * Zod 4 → Gemini's function declaration. Gemini accepts an OpenAPI 3.0 subset and rejects the
- * JSON Schema keywords Zod emits, so they are stripped here. One schema, used both to declare the
- * tool and to validate what comes back.
+ * Zod 4 → a provider-agnostic function declaration. The JSON Schema goes out untouched: narrowing
+ * it is each adapter's job, because what Gemini rejects is part of what OpenAI needs. One schema,
+ * used both to declare the tool and to validate what comes back.
  */
 export function toDeclaration(tool: BotTool): ToolDeclaration {
-  const schema = z.toJSONSchema(tool.schema, { io: 'input' }) as Record<string, unknown>;
-
   return {
     name: tool.name,
     description: tool.description,
-    parameters: sanitizeForGemini(schema),
+    parameters: z.toJSONSchema(tool.schema, { io: 'input' }) as Record<string, unknown>,
   };
-}
-
-const UNSUPPORTED_KEYWORDS = new Set([
-  '$schema',
-  '$ref',
-  '$defs',
-  'additionalProperties',
-  'const',
-  'exclusiveMinimum',
-  'exclusiveMaximum',
-  'patternProperties',
-]);
-
-export function sanitizeForGemini(value: unknown): Record<string, unknown> {
-  return clean(value) as Record<string, unknown>;
-}
-
-function clean(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(clean);
-  if (value === null || typeof value !== 'object') return value;
-
-  const out: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    if (UNSUPPORTED_KEYWORDS.has(key)) continue;
-    out[key] = clean(child);
-  }
-  return out;
 }

@@ -106,6 +106,31 @@ describe('GeminiChatModel', () => {
     expect(sentParts(1)[0]).not.toHaveProperty('thoughtSignature');
   });
 
+  it('narrows the declared parameters to the subset Gemini accepts', async () => {
+    generateContent.mockResolvedValue(answer([{ text: 'listo' }]));
+
+    await new GeminiChatModel([], API_KEY).generate(
+      request({
+        tools: [
+          {
+            name: 'eco',
+            description: 'Devuelve lo que recibe.',
+            parameters: {
+              $schema: 'https://json-schema.org/draft/2020-12/schema',
+              type: 'object',
+              additionalProperties: false,
+              properties: { valor: { type: 'string', exclusiveMinimum: 1 } },
+            },
+          },
+        ],
+      }),
+    );
+
+    // The tool declares plain JSON Schema; anything Gemini rejects is dropped by the adapter.
+    const [declaration] = generateContent.mock.calls[0][0].config.tools[0].functionDeclarations;
+    expect(declaration.parameters).toEqual({ type: 'object', properties: { valor: { type: 'string' } } });
+  });
+
   it('leaves the thought summary out of the reply text', async () => {
     generateContent.mockResolvedValue(
       answer([

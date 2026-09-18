@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildToolRegistry } from '@/modules/bot/tools/tool-registry';
 import { toDeclaration } from '@/modules/bot/tools/bot-tool';
+import { sanitizeForGemini } from '@/modules/bot/infrastructure/gemini-schema';
 import type { BotSettingsRow } from '@/modules/bot/models/bot-settings.model';
 
 const settings = (overrides: Partial<BotSettingsRow> = {}): BotSettingsRow =>
@@ -56,11 +57,13 @@ describe('tool registry', () => {
     }
   });
 
-  it('declares parameters in the OpenAPI subset Gemini accepts', () => {
+  it('every schema survives the narrowing to the OpenAPI subset Gemini accepts', () => {
     for (const tool of buildToolRegistry(settings())) {
-      const serialized = JSON.stringify(toDeclaration(tool).parameters);
+      const parameters = sanitizeForGemini(toDeclaration(tool).parameters);
+      const serialized = JSON.stringify(parameters);
 
       expect(tool.description.length).toBeGreaterThan(20);
+      expect(parameters).toMatchObject({ type: 'object' });
       for (const keyword of ['$schema', '$ref', '$defs', 'additionalProperties', 'exclusiveMinimum']) {
         expect(serialized).not.toContain(keyword);
       }

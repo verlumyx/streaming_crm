@@ -96,6 +96,28 @@ describe('BotAgentRunner', () => {
     });
   });
 
+  it('pairs every tool result with the id of the call it answers', async () => {
+    const chat = new FakeChatModel([
+      {
+        functionCalls: [
+          { name: 'eco', args: { valor: 'a' }, callId: 'call_1' },
+          { name: 'eco', args: { valor: 'b' }, callId: 'call_2' },
+        ],
+      },
+      { text: 'listo' },
+    ]);
+
+    await run(chat, [echoTool]);
+
+    // OpenAI pairs a result with its call by id, never by name: the same tool runs twice here.
+    const [calls, results] = chat.requests[1].contents.slice(-2);
+    expect(calls.parts).toMatchObject([{ callId: 'call_1' }, { callId: 'call_2' }]);
+    expect(results.parts).toMatchObject([
+      { kind: 'functionResponse', name: 'eco', callId: 'call_1', response: { eco: 'a' } },
+      { kind: 'functionResponse', name: 'eco', callId: 'call_2', response: { eco: 'b' } },
+    ]);
+  });
+
   it('keeps talking to the model that actually answered', async () => {
     const chat = new FakeChatModel([
       { functionCalls: [{ name: 'eco', args: { valor: 'x' } }], model: 'modelo-de-respaldo' },

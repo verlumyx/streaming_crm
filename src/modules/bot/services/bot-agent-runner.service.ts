@@ -61,8 +61,10 @@ export class BotAgentRunner {
           kind: 'functionCall' as const,
           name: call.name,
           args: call.args,
-          // The provider demands its own signature back with the replayed call.
+          // Whatever the provider used to identify its own call: Gemini rejects a replayed call
+          // without its signature, OpenAI cannot pair a result with a call without its id.
           thoughtSignature: call.thoughtSignature,
+          callId: call.callId,
         })),
       });
 
@@ -70,7 +72,7 @@ export class BotAgentRunner {
       for (const call of response.functionCalls) {
         const run = await this.toolRunner.run(call.name, call.args, input.context);
         toolRuns.push(run);
-        responses.push({ kind: 'functionResponse', name: run.name, response: run.result });
+        responses.push({ kind: 'functionResponse', name: run.name, response: run.result, callId: call.callId });
       }
       contents.push({ role: 'tool', parts: responses });
     }

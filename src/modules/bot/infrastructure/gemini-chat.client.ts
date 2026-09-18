@@ -9,6 +9,7 @@ import type {
   ChatResult,
   ChatTurn,
 } from './ai-ports';
+import { sanitizeForGemini } from './gemini-schema';
 import { AiUnavailableException } from '../exceptions/ai-unavailable.exception';
 
 /**
@@ -43,7 +44,17 @@ export class GeminiChatModel implements ChatModel {
             systemInstruction: request.system,
             temperature: request.temperature,
             ...(request.tools.length > 0
-              ? { tools: [{ functionDeclarations: request.tools.map((tool) => ({ ...tool })) }] }
+              ? {
+                  tools: [
+                    {
+                      functionDeclarations: request.tools.map((tool) => ({
+                        name: tool.name,
+                        description: tool.description,
+                        parameters: sanitizeForGemini(tool.parameters),
+                      })),
+                    },
+                  ],
+                }
               : {}),
           },
         });

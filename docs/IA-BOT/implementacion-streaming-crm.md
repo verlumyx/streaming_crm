@@ -113,18 +113,30 @@ aguas abajo del gateway desconoce por completo si el mensaje vino de WhatsApp o 
 
 ---
 
-## 4. Integración con la IA (Gemini)
+## 4. Integración con la IA
 
 ### Puertos, no SDK
 
-Los servicios nunca importan `@google/genai`. Dependen de dos interfaces declaradas en
+Los servicios nunca importan el SDK de un proveedor. Dependen de dos interfaces declaradas en
 `src/modules/bot/infrastructure/ai-ports.ts`:
 
 - `ChatModel.generate(ChatRequest): ChatResult` — texto + `functionCalls` + consumo de tokens.
 - `EmbeddingModel` — `embedDocuments` / `embedQuery`.
 
 Esto es lo que permite que **ninguna prueba salga a la red**: `tests/unit/modules/bot/fake-ai.ts`
-inyecta un modelo con guion prefijado.
+inyecta un modelo con guion prefijado. Y es también lo que permite cambiar de proveedor sin tocar un
+solo servicio: hoy el único adaptador es Gemini, pero el puerto ya es neutral.
+
+Cada proveedor identifica sus llamadas a herramientas a su manera, así que una `ChatFunctionCall`
+lleva los dos campos, ambos opcionales y **usados sólo por el adaptador que los emitió**:
+
+| Campo | Proveedor | Para qué |
+|---|---|---|
+| `thoughtSignature` | Gemini | Firma la llamada; reenviarla sin ella rechaza la conversación entera. |
+| `callId` | OpenAI / Azure OpenAI | Empareja el resultado con su llamada **por id, no por nombre** — la misma herramienta puede ejecutarse dos veces en un turno. |
+
+Ninguno de los dos se persiste: el historial que se reproduce en cada turno es sólo texto
+(`toChatTurns`), así que ambos viven dentro de una única ejecución del runner.
 
 ### El adaptador de chat
 
@@ -138,6 +150,9 @@ inyecta un modelo con guion prefijado.
   extrae, la devuelve en el `part` al repetir la llamada, y **la elimina si responde un modelo de
   respaldo**, porque una firma sólo vale para el modelo que la emitió.
 - Las partes marcadas como `thought` no entran en el texto que se le envía al cliente.
+- **Recorta el esquema de cada herramienta** al subconjunto OpenAPI 3.0 que Gemini acepta
+  (`gemini-schema.ts`), justo antes de enviar. La herramienta declara JSON Schema puro y no sabe
+  nada del proveedor.
 
 ### El loop de agente (function calling)
 
@@ -146,7 +161,8 @@ inyecta un modelo con guion prefijado.
 1. Pregunta al modelo con el historial + las declaraciones de herramientas.
 2. Si no pidió herramientas → devuelve el texto y termina.
 3. Si pidió herramientas → las ejecuta, mete `functionCall` + `functionResponse` en el contexto y
-   vuelve al paso 1.
+   vuelve al paso 1. El identificador que trajo la llamada (`thoughtSignature` o `callId`) viaja de
+   vuelta con ella **y con su resultado**, sin que el runner sepa a qué proveedor pertenece.
 4. Tope `maxToolIterations` (config por empresa, por defecto 6) para que un modelo atascado no queme
    la cuota ni cuelgue el worker.
 
@@ -171,9 +187,10 @@ herramienta de SQL libre y ninguna puede leer `app_accounts` (credenciales y cos
 
 Detalles que importan:
 
-- El esquema Zod de cada herramienta se usa **dos veces**: `toDeclaration()` lo convierte al subconjunto
-  OpenAPI 3.0 que acepta Gemini (quitando las palabras clave que rechaza), y el runner lo usa para
-  validar lo que vuelve.
+- El esquema Zod de cada herramienta se usa **dos veces**: `toDeclaration()` lo emite como JSON Schema
+  tal cual, y el runner lo usa para validar lo que vuelve. Recortarlo es trabajo del adaptador,
+  porque lo que Gemini rechaza (`$defs`, `additionalProperties`) es justo parte de lo que OpenAI
+  necesita para el modo `strict`.
 - `ToolContext` lleva `companyId`, `contactId` y `clientId` **del evento en curso, nunca de los
   argumentos del modelo**. Eso hace que un *prompt injection* del tipo "consulta la empresa X" sea
   estructuralmente imposible, no simplemente desaconsejado.
@@ -358,7 +375,7 @@ Corre con `tsx --conditions=react-server` porque vive fuera de Next: sin esa con
 
 | Variable | Para qué |
 |---|---|
-| `GOOGLE_API_KEY` | Chat y embeddings. Sin ella el worker sale con error claro en vez de ensuciar el log cada 2 s. |
+| `GOOGLE_API_KEY` | Chat y embeddings de Gemini. Sin ella el worker sale con error claro en vez de ensuciar el log cada 2 s. |
 | `BOT_CHAT_MODELS` | Cadena de respaldo separada por comas. El modelo de la empresa siempre va primero. |
 | `BOT_EMBEDDING_MODEL` / `BOT_EMBEDDING_DIMENSIONS` | Deben coincidir con la columna `vector(768)`; cambiarlas invalida todos los chunks. |
 | `BOT_WORKER_SECRET` / `BOT_WORKER_BATCH_SIZE` / `BOT_WORKER_POLL_MS` / `BOT_WORKER_STUCK_MINUTES` | Worker y endpoint de cron. |
@@ -414,8 +431,9 @@ Dónde mirar cuando algo no llega, en este orden:
 | Suite | Qué cubre |
 |---|---|
 | `tests/unit/modules/bot/channel-gateways.test.ts` | `parse` y `verify` de ambos gateways contra payloads reales (`tests/fixtures/bot/`). |
-| `tests/unit/modules/bot/gemini-chat.test.ts` | Firmas de pensamiento, cadena de respaldo, partes de *thought*. |
-| `tests/unit/modules/bot/agent-runner.test.ts` | El loop: herramientas, errores, tope de iteraciones, consumo de tokens. |
+| `tests/unit/modules/bot/gemini-chat.test.ts` | Firmas de pensamiento, cadena de respaldo, partes de *thought*, recorte del esquema. |
+| `tests/unit/modules/bot/gemini-schema.test.ts` | Qué palabras clave de JSON Schema se eliminan y cuáles sobreviven. |
+| `tests/unit/modules/bot/agent-runner.test.ts` | El loop: herramientas, errores, tope de iteraciones, consumo de tokens, emparejado llamada↔resultado. |
 | `tests/unit/modules/bot/tool-registry.test.ts` | Qué herramientas se exponen según la configuración. |
 | `tests/unit/modules/bot/message-chunking.test.ts` | Troceado de respuestas largas. |
 | `tests/integration/modules/bot/whatsapp-webhook.test.ts` / `telegram-webhook.test.ts` | Firma, handshake, encolado, idempotencia. |
