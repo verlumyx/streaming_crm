@@ -57,6 +57,13 @@
       "when": 1789750758048,
       "tag": "0007_bot_exchange_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789764552087,
+      "tag": "0008_claims",
+      "breakpoints": true
     }
   ]
 }

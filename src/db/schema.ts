@@ -12,6 +12,7 @@ export * from '@/modules/account/models/account.model';
 export * from '@/modules/sale/models/sale.model';
 export * from '@/modules/transaction/models/transaction.model';
 export * from '@/modules/refund/models/refund.model';
+export * from '@/modules/claim/models/claim.model';
 export * from '@/modules/manual-transaction/models/manual-transaction.model';
 export * from '@/modules/lead/models/lead.model';
 export * from '@/modules/api-auth/models/api-token.model';

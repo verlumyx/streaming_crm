@@ -9,6 +9,7 @@ import { ACCOUNT_MODULE } from '@/modules/account/permissions';
 import { SALE_MODULE } from '@/modules/sale/permissions';
 import { MANUAL_TRANSACTION_MODULE } from '@/modules/manual-transaction/permissions';
 import { REFUND_MODULE } from '@/modules/refund/permissions';
+import { CLAIM_MODULE } from '@/modules/claim/permissions';
 import { REPORT_MODULE } from '@/modules/report/permissions';
 import { BOT_MODULE } from '@/modules/bot/permissions';
 
@@ -24,6 +25,7 @@ export const PERMISSION_REGISTRY: readonly ModuleDefinition[] = [
   SALE_MODULE,
   MANUAL_TRANSACTION_MODULE,
   REFUND_MODULE,
+  CLAIM_MODULE,
   REPORT_MODULE,
   BOT_MODULE,
 ];

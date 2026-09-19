@@ -15,6 +15,7 @@ import {
   LibraryBig,
   ListChecks,
   LogOut,
+  MessageSquareWarning,
   MessagesSquare,
   NotebookPen,
   Package,
@@ -57,6 +58,7 @@ export const MENU_ICONS = {
   Radio,
   BookOpen,
   MessagesSquare,
+  MessageSquareWarning,
   ListChecks,
   LogOut,
 } as const satisfies Record<string, LucideIconComponent>;
